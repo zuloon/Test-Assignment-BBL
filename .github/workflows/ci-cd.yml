@@ -32,7 +32,7 @@ jobs:
       - name: Backend tests
         run: npm run test --workspace backend
 
-  docker:
+  backend_docker:
     runs-on: ubuntu-latest
     needs: verify
     steps:
@@ -50,35 +50,46 @@ jobs:
           push: false
           tags: bbl-bookmark-backend:ci
 
-      - name: Build frontend image
-        uses: docker/build-push-action@v6
-        with:
-          context: .
-          file: frontend/Dockerfile
-          push: false
-          tags: bbl-bookmark-frontend:ci
-          build-args: |
-            VITE_API_BASE_URL=http://localhost:3001
-            VITE_AUTH0_DOMAIN=dev-yg.us.auth0.com
-            VITE_AUTH0_CLIENT_ID=H9F6QG5SzTKMv0tbmgxLj9LjG1EKVllA
-            VITE_AUTH0_AUDIENCE=https://bbl-candidate-test-api
-
-  deploy:
+  deploy_frontend:
     runs-on: ubuntu-latest
-    needs: docker
-    if: github.ref == 'refs/heads/main' && github.event_name == 'push' && vars.ENABLE_SSH_DEPLOY == 'true'
+    needs: verify
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push' && vars.ENABLE_CLOUDFLARE_PAGES_DEPLOY == 'true'
+    permissions:
+      contents: read
+      deployments: write
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Deploy with Docker Compose over SSH
-        uses: appleboy/ssh-action@v1.2.0
+      - name: Setup Node
+        uses: actions/setup-node@v4
         with:
-          host: ${{ secrets.DEPLOY_HOST }}
-          username: ${{ secrets.DEPLOY_USER }}
-          key: ${{ secrets.DEPLOY_SSH_KEY }}
-          script: |
-            set -e
-            cd "${{ vars.DEPLOY_PATH }}"
-            git pull --ff-only
-            docker compose up -d --build
+          node-version: "24"
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build frontend
+        env:
+          VITE_API_BASE_URL: ${{ vars.VITE_API_BASE_URL }}
+          VITE_AUTH0_DOMAIN: ${{ vars.VITE_AUTH0_DOMAIN }}
+          VITE_AUTH0_CLIENT_ID: ${{ vars.VITE_AUTH0_CLIENT_ID }}
+          VITE_AUTH0_AUDIENCE: ${{ vars.VITE_AUTH0_AUDIENCE }}
+        run: npm run build --workspace frontend
+
+      - name: Deploy frontend to Cloudflare Pages
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          command: pages deploy frontend/dist --project-name=${{ vars.CLOUDFLARE_PAGES_PROJECT_NAME }} --branch=${{ github.ref_name }}
+          gitHubToken: ${{ secrets.GITHUB_TOKEN }}
+
+  deploy_backend:
+    runs-on: ubuntu-latest
+    needs: backend_docker
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push' && vars.ENABLE_RENDER_BACKEND_DEPLOY == 'true'
+    steps:
+      - name: Trigger Render backend deploy
+        run: curl -fsS -X POST "${{ secrets.RENDER_BACKEND_DEPLOY_HOOK_URL }}"
