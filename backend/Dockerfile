@@ -19,9 +19,7 @@ ENV DATABASE_URL=file:/data/dev.db
 
 COPY package.json package-lock.json ./
 COPY --from=build /app/node_modules node_modules
-COPY --from=build /app/backend/package.json backend/package.json
-COPY --from=build /app/backend/dist backend/dist
-COPY --from=build /app/backend/prisma backend/prisma
+COPY --from=build /app/backend backend
 
 VOLUME ["/data"]
 EXPOSE 3001
