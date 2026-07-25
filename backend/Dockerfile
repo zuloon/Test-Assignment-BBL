@@ -10,7 +10,6 @@ FROM deps AS build
 COPY backend backend
 RUN npm run db:generate --workspace backend
 RUN npm run build --workspace backend
-RUN npm prune --omit=dev --workspace backend
 
 FROM node:24-bookworm-slim AS runtime
 WORKDIR /app
