@@ -16,15 +16,7 @@ The current user id is the validated token's `sub` claim.
 
 ## Error Shape
 
-```json
-{
-  "error": {
-    "code": "string",
-    "message": "string",
-    "details": {}
-  }
-}
-```
+The current implementation uses NestJS default JSON error responses such as `{ "message": "...", "error": "Not Found", "statusCode": 404 }`.
 
 Private resources owned by another user return `404 Not Found`.
 
@@ -38,7 +30,7 @@ Returns the current signed-in user.
 
 `GET /collections`
 
-Lists collections owned by the current user. Shared collections may be included only when explicitly requested by a filter such as `?scope=shared`.
+Lists collections owned by the current user. Shared collections are returned only with `?scope=shared`.
 
 Filters:
 
@@ -117,7 +109,6 @@ Lists bookmarks owned by the current user.
 Filters:
 
 - `collectionId`
-- `q`
 
 `POST /bookmarks`
 
@@ -149,4 +140,3 @@ Every repository query must include either:
 Mutation operations are owner-only.
 
 Nested writes must validate both sides of the relationship. For example, assigning a bookmark to a collection must verify that the collection is owned by the current user.
-

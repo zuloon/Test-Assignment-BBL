@@ -38,6 +38,14 @@ T04/T05 adds:
 - nullable bookmark collection assignment,
 - safe collection deletion actions for non-empty collections.
 
+T06 sharing adds:
+
+- read-only collection sharing by known user email,
+- `GET /collections?scope=shared`,
+- shared collection/bookmark read access,
+- owner-only share revoke,
+- mutation denial for shared users.
+
 ## Project Shape
 
 ```text
@@ -82,11 +90,41 @@ npm run build
 
 ```bash
 npm run db:generate --workspace backend
-npm run db:push --workspace backend
+npm run db:bootstrap --workspace backend
 npm run db:seed --workspace backend
 ```
 
-The default local database is `backend/prisma/dev.db`.
+The default local database is `backend/prisma/dev.db`. `db:bootstrap` creates local SQLite tables for development and seeds two users. Prisma `db push` is kept as a standard ORM command, but local development currently uses the bootstrap script because Prisma's schema engine failed on this Windows machine with a blank engine error.
+
+## Auth And Test Users
+
+Real browser login uses the provided Auth0 tenant. The PDF only provides one known account: `candidate@test.com`. Cross-user behavior such as sharing is verified with backend test auth mode unless another Auth0 tenant user is available.
+
+For API smoke tests:
+
+```bash
+$env:AUTH_MODE="test"
+npm run dev:backend
+```
+
+Use bearer tokens such as `Bearer test:auth0|user-a` and `Bearer test:auth0|user-b`.
+
+The frontend stores Auth0 SDK cache in localStorage during development so refreshes do not force another login. This is a dev trade-off and should be reconsidered for production.
+
+## Completed Scope
+
+- Auth0 login and `/me`
+- Collections CRUD
+- Bookmarks CRUD
+- Explicit collection delete behavior with bookmarks
+- Read-only collection sharing
+
+## Known Gaps
+
+- Backend e2e tests cover auth, owner privacy, bookmark ownership, collection delete actions, and read-only sharing.
+- Frontend automated coverage is still limited to the health/status slice.
+- SQLite schema bootstrap is manual SQL in `backend/prisma/bootstrap-dev-db.mjs` because `prisma db push` failed locally.
+- Frontend bundle size is over Vite's default warning threshold after Auth0/MUI; this is not optimized yet.
 
 ## Product Invariant
 

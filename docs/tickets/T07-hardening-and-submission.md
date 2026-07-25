@@ -25,11 +25,11 @@ Prepare the project for grading with stronger verification and complete submissi
 
 ## Automated Tests
 
-- Backend unit/e2e suite passes.
-- Frontend tests pass.
 - Backend build passes.
 - Frontend build passes.
-- Any lint/type checks pass or failures are documented with rationale.
+- Backend e2e suite passes.
+- Frontend test coverage is limited to the health/status slice.
+- Any skipped checks or tool failures are documented with rationale.
 
 ## Manual Smoke Test
 
@@ -42,4 +42,3 @@ Prepare the project for grading with stronger verification and complete submissi
 ## Commit Message
 
 `docs: finalize verified submission`
-

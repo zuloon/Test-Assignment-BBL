@@ -5,6 +5,7 @@
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
     "db:generate": "prisma generate",
+    "db:bootstrap": "node prisma/bootstrap-dev-db.mjs",
     "db:push": "prisma db push",
     "db:seed": "prisma db seed",
     "start": "node dist/main.js",

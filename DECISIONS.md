@@ -40,3 +40,22 @@ Decision: use SQLite with Prisma for the take-home submission unless a later Doc
 
 Rationale: SQLite satisfies SQL persistence, is easy for reviewers to run locally, and avoids adding infrastructure that does not directly improve the core grading criteria.
 
+## D7. Development Auth Cache
+
+Decision: the frontend uses Auth0 SDK `cacheLocation="localstorage"` during development.
+
+Rationale: the app is being built and tested locally, and page refreshes or route reloads were interrupting the workflow when the SDK cache was memory-only.
+
+Trade-off: localStorage has higher XSS exposure than memory-only token caching. This is a development convenience, not a production security recommendation.
+
+## D8. Cross-User Verification
+
+Decision: cross-user behavior is verified with backend test auth mode and seeded users unless another real Auth0 tenant user is available.
+
+Rationale: the provided Auth0 tenant includes one known test login in the brief. Sharing and owner-boundary behavior need two identities, so deterministic test bearer tokens such as `Bearer test:auth0|user-a` and `Bearer test:auth0|user-b` are used for API smoke tests.
+
+## D9. Local SQLite Bootstrap
+
+Decision: local development uses `npm run db:bootstrap --workspace backend` to create SQLite tables.
+
+Rationale: `prisma generate` works, but `prisma db push` and `prisma migrate dev` failed on this Windows machine with a blank Prisma schema engine error. The bootstrap script keeps local verification moving while preserving Prisma Client as the application ORM.
