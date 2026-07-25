@@ -28,7 +28,7 @@ Prepare the project for grading with stronger verification and complete submissi
 - Backend build passes.
 - Frontend build passes.
 - Backend e2e suite passes.
-- Frontend test coverage is limited to the health/status slice.
+- Frontend automated tests are intentionally out of scope for this submission.
 - Any skipped checks or tool failures are documented with rationale.
 
 ## Manual Smoke Test

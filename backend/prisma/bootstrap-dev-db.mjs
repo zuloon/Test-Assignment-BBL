@@ -1,9 +1,13 @@
 import { DatabaseSync } from "node:sqlite";
-import { dirname, resolve } from "node:path";
+import { dirname, isAbsolute, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const prismaDir = dirname(fileURLToPath(import.meta.url));
-const db = new DatabaseSync(resolve(prismaDir, "dev.db"));
+const databaseUrl = process.env.DATABASE_URL ?? "file:./dev.db";
+const databasePath = databaseUrl.startsWith("file:")
+  ? databaseUrl.slice("file:".length)
+  : databaseUrl;
+const db = new DatabaseSync(isAbsolute(databasePath) ? databasePath : resolve(prismaDir, databasePath));
 
 db.exec(`
   PRAGMA foreign_keys = ON;

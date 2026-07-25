@@ -48,7 +48,11 @@ export class CollectionsController {
   }
 
   @Post(":id/shares")
-  share(@CurrentUserParam() user: CurrentUser, @Param("id") id: string, @Body() body: { email?: string }) {
+  share(
+    @CurrentUserParam() user: CurrentUser,
+    @Param("id") id: string,
+    @Body() body: { email?: string; permission?: "read" | "edit" }
+  ) {
     return this.collectionsService.share(user.id, id, body);
   }
 

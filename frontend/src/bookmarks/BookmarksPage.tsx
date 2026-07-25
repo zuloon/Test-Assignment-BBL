@@ -22,9 +22,10 @@ export function BookmarksPage() {
   const [state, setState] = useState<LoadState>({ type: "loading" });
   const [form, setForm] = useState<BookmarkInput>(emptyForm);
   const [filterCollectionId, setFilterCollectionId] = useState("");
+  const [search, setSearch] = useState("");
   const [editing, setEditing] = useState<Bookmark | null>(null);
 
-  async function loadData(nextCollectionId = filterCollectionId) {
+  async function loadData(nextCollectionId = filterCollectionId, nextSearch = search) {
     if (!isAuthenticated) {
       setState({ type: "ready", bookmarks: [], collections: [] });
       return;
@@ -35,7 +36,7 @@ export function BookmarksPage() {
     try {
       const [collections, bookmarks] = await Promise.all([
         fetchCollections(getAccessTokenSilently),
-        fetchBookmarks(getAccessTokenSilently, nextCollectionId || undefined)
+        fetchBookmarks(getAccessTokenSilently, nextCollectionId || undefined, nextSearch.trim() || undefined)
       ]);
       setState({ type: "ready", collections, bookmarks });
     } catch (error) {
@@ -47,8 +48,12 @@ export function BookmarksPage() {
   }
 
   useEffect(() => {
-    void loadData(filterCollectionId);
-  }, [filterCollectionId, isAuthenticated]);
+    const timeoutId = window.setTimeout(() => {
+      void loadData(filterCollectionId, search);
+    }, 300);
+
+    return () => window.clearTimeout(timeoutId);
+  }, [filterCollectionId, search, isAuthenticated]);
 
   async function submitBookmark(event: FormEvent) {
     event.preventDefault();
@@ -153,6 +158,13 @@ export function BookmarksPage() {
       </Stack>
 
       <Stack direction={{ xs: "column", sm: "row" }} spacing={1.5}>
+        <TextField
+          label="Search bookmarks"
+          value={search}
+          onChange={(event) => setSearch(event.target.value)}
+          size="small"
+          sx={{ minWidth: 280 }}
+        />
         <TextField
           select
           label="Filter by collection"

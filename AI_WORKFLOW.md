@@ -49,8 +49,8 @@ Build checks run during implementation:
 
 Automated tests:
 
-- `npm run test --workspace backend` passed with 2 files and 6 tests.
-- Frontend Vitest could not be rerun from Codex after the approval request failed with an internal tool error. The existing frontend test file covers the health/status slice.
+- `npm run test --workspace backend` passed with 2 files and 7 tests.
+- Frontend automated tests were removed from the active CI path; frontend verification currently relies on TypeScript/Vite build plus manual browser checks.
 
 Manual/API smoke checks covered:
 

@@ -1,0 +1,39 @@
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    environment:
+      PORT: "3001"
+      DATABASE_URL: file:/data/dev.db
+      FRONTEND_URL: http://localhost:3000
+      AUTH0_ISSUER: https://dev-yg.us.auth0.com/
+      AUTH0_AUDIENCE: https://bbl-candidate-test-api
+      AUTH_MODE: auth0
+    ports:
+      - "3001:3001"
+    volumes:
+      - backend-data:/data
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3001/health').then(r => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+
+  frontend:
+    build:
+      context: .
+      dockerfile: frontend/Dockerfile
+      args:
+        VITE_API_BASE_URL: http://localhost:3001
+        VITE_AUTH0_DOMAIN: dev-yg.us.auth0.com
+        VITE_AUTH0_CLIENT_ID: H9F6QG5SzTKMv0tbmgxLj9LjG1EKVllA
+        VITE_AUTH0_AUDIENCE: https://bbl-candidate-test-api
+    ports:
+      - "3000:80"
+    depends_on:
+      backend:
+        condition: service_healthy
+
+volumes:
+  backend-data:

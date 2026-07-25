@@ -20,6 +20,7 @@ import {
   Collection,
   CollectionShare,
   DeleteCollectionAction,
+  SharePermission,
   createCollection,
   deleteCollection,
   fetchCollections,
@@ -46,6 +47,7 @@ export function CollectionsPage() {
   const [deleteError, setDeleteError] = useState<string | null>(null);
   const [shareTarget, setShareTarget] = useState<Collection | null>(null);
   const [shareEmail, setShareEmail] = useState("");
+  const [sharePermission, setSharePermission] = useState<SharePermission>("read");
   const [shares, setShares] = useState<CollectionShare[]>([]);
   const [shareError, setShareError] = useState<string | null>(null);
 
@@ -141,6 +143,7 @@ export function CollectionsPage() {
   async function startShare(collection: Collection) {
     setShareTarget(collection);
     setShareEmail("");
+    setSharePermission("read");
     setShareError(null);
     setShares(await fetchCollectionShares(getAccessTokenSilently, collection.id));
   }
@@ -151,8 +154,9 @@ export function CollectionsPage() {
     }
 
     try {
-      await shareCollection(getAccessTokenSilently, shareTarget.id, shareEmail);
+      await shareCollection(getAccessTokenSilently, shareTarget.id, shareEmail, sharePermission);
       setShareEmail("");
+      setSharePermission("read");
       setShares(await fetchCollectionShares(getAccessTokenSilently, shareTarget.id));
     } catch (error) {
       setShareError(error instanceof Error ? error.message : "Unable to share collection");
@@ -379,15 +383,31 @@ export function CollectionsPage() {
                 size="small"
                 sx={{ flex: 1 }}
               />
+              <TextField
+                select
+                label="Role"
+                value={sharePermission}
+                onChange={(event) => setSharePermission(event.target.value as SharePermission)}
+                size="small"
+                sx={{ minWidth: 140 }}
+              >
+                <MenuItem value="read">Read</MenuItem>
+                <MenuItem value="edit">Edit</MenuItem>
+              </TextField>
               <Button variant="contained" onClick={() => void submitShare()}>
                 Share
               </Button>
             </Stack>
+            <Typography variant="body2" color="text.secondary">
+              Edit is reserved for the future role workflow; shared users are read-only in this build.
+            </Typography>
             {shares.length > 0 ? (
               <Stack spacing={1}>
                 {shares.map((share) => (
                   <Stack key={share.id} direction="row" sx={{ alignItems: "center", justifyContent: "space-between" }}>
-                    <Typography>{share.sharedWithUser.email}</Typography>
+                    <Typography>
+                      {share.sharedWithUser.email} - {share.permission}
+                    </Typography>
                     <Button size="small" color="error" onClick={() => void revokeShare(share)}>
                       Revoke
                     </Button>

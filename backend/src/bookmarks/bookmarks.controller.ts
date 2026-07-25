@@ -17,8 +17,8 @@ export class BookmarksController {
   constructor(@Inject(BookmarksService) private readonly bookmarksService: BookmarksService) {}
 
   @Get("bookmarks")
-  list(@CurrentUserParam() user: CurrentUser, @Query("collectionId") collectionId?: string) {
-    return this.bookmarksService.list(user.id, collectionId);
+  list(@CurrentUserParam() user: CurrentUser, @Query("collectionId") collectionId?: string, @Query("q") q?: string) {
+    return this.bookmarksService.list(user.id, collectionId, q);
   }
 
   @Post("bookmarks")

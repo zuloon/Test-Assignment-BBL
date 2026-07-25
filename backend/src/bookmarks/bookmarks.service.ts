@@ -12,11 +12,22 @@ type BookmarkInput = {
 export class BookmarksService {
   constructor(@Inject(PrismaService) private readonly prisma: PrismaService) {}
 
-  list(ownerId: string, collectionId?: string) {
+  list(ownerId: string, collectionId?: string, q?: string) {
+    const search = q?.trim();
+
     return this.prisma.bookmark.findMany({
       where: {
         ownerId,
-        ...(collectionId ? { collectionId } : {})
+        ...(collectionId ? { collectionId } : {}),
+        ...(search
+          ? {
+              OR: [
+                { title: { contains: search } },
+                { url: { contains: search } },
+                { notes: { contains: search } }
+              ]
+            }
+          : {})
       },
       include: { collection: true },
       orderBy: { updatedAt: "desc" }
@@ -129,7 +140,7 @@ export class BookmarksService {
             shares: {
               some: {
                 sharedWithUserId: userId,
-                permission: "read"
+                permission: { in: ["read", "edit"] }
               }
             }
           }

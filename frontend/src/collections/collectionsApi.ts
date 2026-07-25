@@ -18,7 +18,7 @@ export type CollectionShare = {
   collectionId: string;
   ownerId: string;
   sharedWithUserId: string;
-  permission: "read";
+  permission: "read" | "edit";
   sharedWithUser: {
     id: string;
     email: string;
@@ -27,6 +27,8 @@ export type CollectionShare = {
   createdAt: string;
   updatedAt: string;
 };
+
+export type SharePermission = "read" | "edit";
 
 export function fetchCollections(getAccessToken: AccessTokenProvider, name?: string, scope: "owned" | "shared" = "owned") {
   const params = new URLSearchParams();
@@ -58,8 +60,8 @@ export function deleteCollection(getAccessToken: AccessTokenProvider, id: string
   return apiDelete<{ deleted: true }>(`/collections/${id}`, getAccessToken, action);
 }
 
-export function shareCollection(getAccessToken: AccessTokenProvider, id: string, email: string) {
-  return apiPost<CollectionShare>(`/collections/${id}/shares`, getAccessToken, { email });
+export function shareCollection(getAccessToken: AccessTokenProvider, id: string, email: string, permission: SharePermission) {
+  return apiPost<CollectionShare>(`/collections/${id}/shares`, getAccessToken, { email, permission });
 }
 
 export function fetchCollectionShares(getAccessToken: AccessTokenProvider, id: string) {

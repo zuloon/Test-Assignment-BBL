@@ -1,5 +1,6 @@
 import { CssBaseline, ThemeProvider, createTheme } from "@mui/material";
 import { BrowserRouter, Route, Routes } from "react-router";
+import { AllPage } from "./all/AllPage";
 import { AppAuthProvider } from "./auth/AuthProvider";
 import { BookmarksPage } from "./bookmarks/BookmarksPage";
 import { CollectionsPage } from "./collections/CollectionsPage";
@@ -36,7 +37,8 @@ export function App() {
               { label: "Status", to: "/" },
               { label: "Account", to: "/me" },
               { label: "Collections", to: "/collections" },
-              { label: "Bookmarks", to: "/bookmarks" }
+              { label: "Bookmarks", to: "/bookmarks" },
+              { label: "All", to: "/all" }
             ]}
           >
             <Routes>
@@ -45,6 +47,7 @@ export function App() {
               <Route path="/me" element={<MePage />} />
               <Route path="/collections" element={<CollectionsPage />} />
               <Route path="/bookmarks" element={<BookmarksPage />} />
+              <Route path="/all" element={<AllPage />} />
             </Routes>
           </AppLayout>
         </BrowserRouter>

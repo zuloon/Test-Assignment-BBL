@@ -205,6 +205,36 @@ describe("bookmark manager API", () => {
       .expect(404);
   });
 
+  it("searches owned bookmarks by title, url, and notes", async () => {
+    await request(app.getHttpServer())
+      .post("/bookmarks")
+      .set("Authorization", auth(userA))
+      .send({ url: "https://example.com/prisma", title: "Prisma notes", notes: "ORM reference" })
+      .expect(201);
+
+    await request(app.getHttpServer())
+      .post("/bookmarks")
+      .set("Authorization", auth(userA))
+      .send({ url: "https://example.com/react", title: "React docs", notes: "Frontend reference" })
+      .expect(201);
+
+    const byTitle = await request(app.getHttpServer())
+      .get("/bookmarks?q=prisma")
+      .set("Authorization", auth(userA))
+      .expect(200);
+
+    expect(byTitle.body).toHaveLength(1);
+    expect(byTitle.body[0].title).toBe("Prisma notes");
+
+    const byNotes = await request(app.getHttpServer())
+      .get("/bookmarks?q=Frontend")
+      .set("Authorization", auth(userA))
+      .expect(200);
+
+    expect(byNotes.body).toHaveLength(1);
+    expect(byNotes.body[0].title).toBe("React docs");
+  });
+
   it("requires an explicit action before deleting a collection with bookmarks", async () => {
     const collection = await request(app.getHttpServer())
       .post("/collections")
@@ -254,8 +284,10 @@ describe("bookmark manager API", () => {
     const share = await request(app.getHttpServer())
       .post(`/collections/${collection.body.id}/shares`)
       .set("Authorization", auth(userA))
-      .send({ email: "other-user@test.com" })
+      .send({ email: "other-user@test.com", permission: "edit" })
       .expect(201);
+
+    expect(share.body.permission).toBe("edit");
 
     const sharedCollections = await request(app.getHttpServer())
       .get("/collections?scope=shared")

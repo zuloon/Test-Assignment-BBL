@@ -59,3 +59,9 @@ Rationale: the provided Auth0 tenant includes one known test login in the brief.
 Decision: local development uses `npm run db:bootstrap --workspace backend` to create SQLite tables.
 
 Rationale: `prisma generate` works, but `prisma db push` and `prisma migrate dev` failed on this Windows machine with a blank Prisma schema engine error. The bootstrap script keeps local verification moving while preserving Prisma Client as the application ORM.
+
+## D10. Staged Share Roles
+
+Decision: the share workflow stores `read` or `edit` in `CollectionShare.permission`, but mutation access remains owner-only.
+
+Rationale: the UI can show the intended role model for the bonus flow while preserving the already-tested privacy boundary until edit-role behavior is implemented and covered by tests.

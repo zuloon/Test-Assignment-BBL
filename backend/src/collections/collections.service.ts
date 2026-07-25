@@ -12,6 +12,7 @@ type DeleteCollectionInput = {
 
 type ShareInput = {
   email?: string;
+  permission?: "read" | "edit";
 };
 
 @Injectable()
@@ -25,7 +26,7 @@ export class CollectionsService {
           shares: {
             some: {
               sharedWithUserId: ownerId,
-              permission: "read"
+              permission: { in: ["read", "edit"] }
             }
           },
           ...(name ? { name: { contains: name } } : {})
@@ -75,7 +76,7 @@ export class CollectionsService {
             shares: {
               some: {
                 sharedWithUserId: userId,
-                permission: "read"
+                permission: { in: ["read", "edit"] }
               }
             }
           }
@@ -156,6 +157,7 @@ export class CollectionsService {
   async share(ownerId: string, collectionId: string, input: ShareInput) {
     const collection = await this.get(ownerId, collectionId);
     const email = input.email?.trim().toLowerCase();
+    const requestedPermission = input.permission === "edit" ? "edit" : "read";
 
     if (!email) {
       throw new NotFoundException("User not found");
@@ -176,12 +178,12 @@ export class CollectionsService {
           sharedWithUserId: recipient.id
         }
       },
-      update: { permission: "read" },
+      update: { permission: requestedPermission },
       create: {
         collectionId: collection.id,
         ownerId,
         sharedWithUserId: recipient.id,
-        permission: "read"
+        permission: requestedPermission
       },
       include: { sharedWithUser: { select: { id: true, email: true, name: true } } }
     });

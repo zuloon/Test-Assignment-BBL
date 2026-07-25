@@ -88,9 +88,12 @@ Owner-only. Shares a collection with a known user by email.
 
 ```json
 {
-  "email": "person@example.com"
+  "email": "person@example.com",
+  "permission": "read"
 }
 ```
+
+`permission` accepts `read` or `edit`. The current authorization model still treats shared users as read-only; `edit` is stored for the future role workflow.
 
 `GET /collections/:id/shares`
 
@@ -109,6 +112,7 @@ Lists bookmarks owned by the current user.
 Filters:
 
 - `collectionId`
+- `q`: searches `title`, `url`, and `notes`
 
 `POST /bookmarks`
 

@@ -1,0 +1,14 @@
+node_modules
+dist
+coverage
+.git
+.github
+.env
+.env.local
+backend/prisma/dev.db
+backend/prisma/dev.db-journal
+backend/prisma/test*.db
+backend/prisma/test*.db-journal
+*.tsbuildinfo
+.vite
+npm-debug.log*

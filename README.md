@@ -41,10 +41,17 @@ T04/T05 adds:
 T06 sharing adds:
 
 - read-only collection sharing by known user email,
+- stored share role selection for `read` and future `edit`,
 - `GET /collections?scope=shared`,
 - shared collection/bookmark read access,
 - owner-only share revoke,
 - mutation denial for shared users.
+
+Bonus UI adds:
+
+- `/all` grouped view showing collections with bookmarks inside them,
+- bookmark keyword search by title, URL, and notes,
+- reactive filters without an Apply button.
 
 ## Project Shape
 
@@ -86,6 +93,25 @@ npm test
 npm run build
 ```
 
+## Docker
+
+Build and run both services locally:
+
+```bash
+docker compose up -d --build
+```
+
+Frontend is served at `http://localhost:3000`.
+Backend is served at `http://localhost:3001`.
+SQLite data is stored in the `backend-data` Docker volume at `/data/dev.db`.
+
+Build individual images:
+
+```bash
+docker build -f backend/Dockerfile -t bbl-bookmark-backend .
+docker build -f frontend/Dockerfile -t bbl-bookmark-frontend .
+```
+
 ## Database
 
 ```bash
@@ -118,11 +144,15 @@ The frontend stores Auth0 SDK cache in localStorage during development so refres
 - Bookmarks CRUD
 - Explicit collection delete behavior with bookmarks
 - Read-only collection sharing
+- Bonus grouped `/all` page
+- Bonus bookmark search
+- Dockerfiles and Docker Compose deployment setup
+- GitHub Actions CI/CD workflow
 
 ## Known Gaps
 
 - Backend e2e tests cover auth, owner privacy, bookmark ownership, collection delete actions, and read-only sharing.
-- Frontend automated coverage is still limited to the health/status slice.
+- Frontend automated tests are intentionally not included; current verification relies on TypeScript/Vite build plus manual browser checks.
 - SQLite schema bootstrap is manual SQL in `backend/prisma/bootstrap-dev-db.mjs` because `prisma db push` failed locally.
 - Frontend bundle size is over Vite's default warning threshold after Auth0/MUI; this is not optimized yet.
 
