@@ -24,8 +24,12 @@ export class BookmarksService {
   }
 
   async listForCollection(ownerId: string, collectionId: string) {
-    await this.assertOwnedCollection(ownerId, collectionId);
-    return this.list(ownerId, collectionId);
+    await this.assertReadableCollection(ownerId, collectionId);
+    return this.prisma.bookmark.findMany({
+      where: { collectionId },
+      include: { collection: true },
+      orderBy: { updatedAt: "desc" }
+    });
   }
 
   async create(ownerId: string, input: BookmarkInput) {
@@ -107,6 +111,30 @@ export class BookmarksService {
   private async assertOwnedCollection(ownerId: string, collectionId: string) {
     const collection = await this.prisma.collection.findFirst({
       where: { id: collectionId, ownerId },
+      select: { id: true }
+    });
+
+    if (!collection) {
+      throw new NotFoundException("Collection not found");
+    }
+  }
+
+  private async assertReadableCollection(userId: string, collectionId: string) {
+    const collection = await this.prisma.collection.findFirst({
+      where: {
+        id: collectionId,
+        OR: [
+          { ownerId: userId },
+          {
+            shares: {
+              some: {
+                sharedWithUserId: userId,
+                permission: "read"
+              }
+            }
+          }
+        ]
+      },
       select: { id: true }
     });
 

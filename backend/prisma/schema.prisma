@@ -8,23 +8,26 @@ datasource db {
 }
 
 model User {
-  id          String       @id
-  email       String       @unique
-  name        String?
-  collections Collection[]
-  bookmarks   Bookmark[]
-  createdAt   DateTime     @default(now())
-  updatedAt   DateTime     @updatedAt
+  id             String            @id
+  email          String            @unique
+  name           String?
+  collections    Collection[]
+  bookmarks      Bookmark[]
+  sharesReceived CollectionShare[] @relation("CollectionShareRecipient")
+  sharesCreated  CollectionShare[] @relation("CollectionShareOwner")
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
 }
 
 model Collection {
-  id        String   @id @default(cuid())
+  id        String            @id @default(cuid())
   name      String
   ownerId   String
-  owner     User     @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  owner     User              @relation(fields: [ownerId], references: [id], onDelete: Cascade)
   bookmarks Bookmark[]
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  shares    CollectionShare[]
+  createdAt DateTime          @default(now())
+  updatedAt DateTime          @updatedAt
 
   @@index([ownerId])
 }
@@ -43,4 +46,21 @@ model Bookmark {
 
   @@index([ownerId])
   @@index([collectionId])
+}
+
+model CollectionShare {
+  id               String     @id @default(cuid())
+  collectionId     String
+  collection       Collection @relation(fields: [collectionId], references: [id], onDelete: Cascade)
+  ownerId          String
+  owner            User       @relation("CollectionShareOwner", fields: [ownerId], references: [id], onDelete: Cascade)
+  sharedWithUserId String
+  sharedWithUser   User       @relation("CollectionShareRecipient", fields: [sharedWithUserId], references: [id], onDelete: Cascade)
+  permission       String     @default("read")
+  createdAt        DateTime   @default(now())
+  updatedAt        DateTime   @updatedAt
+
+  @@unique([collectionId, sharedWithUserId])
+  @@index([ownerId])
+  @@index([sharedWithUserId])
 }

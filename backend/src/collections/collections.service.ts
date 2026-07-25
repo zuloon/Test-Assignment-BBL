@@ -10,11 +10,31 @@ type DeleteCollectionInput = {
   targetCollectionId?: string;
 };
 
+type ShareInput = {
+  email?: string;
+};
+
 @Injectable()
 export class CollectionsService {
   constructor(@Inject(PrismaService) private readonly prisma: PrismaService) {}
 
-  list(ownerId: string, name?: string) {
+  list(ownerId: string, name?: string, scope: "owned" | "shared" = "owned") {
+    if (scope === "shared") {
+      return this.prisma.collection.findMany({
+        where: {
+          shares: {
+            some: {
+              sharedWithUserId: ownerId,
+              permission: "read"
+            }
+          },
+          ...(name ? { name: { contains: name } } : {})
+        },
+        include: { owner: { select: { id: true, email: true, name: true } } },
+        orderBy: { updatedAt: "desc" }
+      });
+    }
+
     return this.prisma.collection.findMany({
       where: {
         ownerId,
@@ -36,6 +56,32 @@ export class CollectionsService {
   async get(ownerId: string, id: string) {
     const collection = await this.prisma.collection.findFirst({
       where: { id, ownerId }
+    });
+
+    if (!collection) {
+      throw new NotFoundException("Collection not found");
+    }
+
+    return collection;
+  }
+
+  async getReadable(userId: string, id: string) {
+    const collection = await this.prisma.collection.findFirst({
+      where: {
+        id,
+        OR: [
+          { ownerId: userId },
+          {
+            shares: {
+              some: {
+                sharedWithUserId: userId,
+                permission: "read"
+              }
+            }
+          }
+        ]
+      },
+      include: { owner: { select: { id: true, email: true, name: true } } }
     });
 
     if (!collection) {
@@ -104,6 +150,65 @@ export class CollectionsService {
     }
 
     await this.prisma.collection.delete({ where: { id } });
+    return { deleted: true };
+  }
+
+  async share(ownerId: string, collectionId: string, input: ShareInput) {
+    const collection = await this.get(ownerId, collectionId);
+    const email = input.email?.trim().toLowerCase();
+
+    if (!email) {
+      throw new NotFoundException("User not found");
+    }
+
+    const recipient = await this.prisma.user.findUnique({
+      where: { email }
+    });
+
+    if (!recipient || recipient.id === ownerId) {
+      throw new NotFoundException("User not found");
+    }
+
+    return this.prisma.collectionShare.upsert({
+      where: {
+        collectionId_sharedWithUserId: {
+          collectionId: collection.id,
+          sharedWithUserId: recipient.id
+        }
+      },
+      update: { permission: "read" },
+      create: {
+        collectionId: collection.id,
+        ownerId,
+        sharedWithUserId: recipient.id,
+        permission: "read"
+      },
+      include: { sharedWithUser: { select: { id: true, email: true, name: true } } }
+    });
+  }
+
+  async listShares(ownerId: string, collectionId: string) {
+    await this.get(ownerId, collectionId);
+
+    return this.prisma.collectionShare.findMany({
+      where: { ownerId, collectionId },
+      include: { sharedWithUser: { select: { id: true, email: true, name: true } } },
+      orderBy: { createdAt: "desc" }
+    });
+  }
+
+  async revokeShare(ownerId: string, collectionId: string, shareId: string) {
+    await this.get(ownerId, collectionId);
+
+    const share = await this.prisma.collectionShare.findFirst({
+      where: { id: shareId, ownerId, collectionId }
+    });
+
+    if (!share) {
+      throw new NotFoundException("Share not found");
+    }
+
+    await this.prisma.collectionShare.delete({ where: { id: shareId } });
     return { deleted: true };
   }
 

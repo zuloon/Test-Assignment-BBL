@@ -10,8 +10,12 @@ export class CollectionsController {
   constructor(@Inject(CollectionsService) private readonly collectionsService: CollectionsService) {}
 
   @Get()
-  list(@CurrentUserParam() user: CurrentUser, @Query("name") name?: string) {
-    return this.collectionsService.list(user.id, name);
+  list(
+    @CurrentUserParam() user: CurrentUser,
+    @Query("name") name?: string,
+    @Query("scope") scope?: "owned" | "shared"
+  ) {
+    return this.collectionsService.list(user.id, name, scope === "shared" ? "shared" : "owned");
   }
 
   @Post()
@@ -21,7 +25,7 @@ export class CollectionsController {
 
   @Get(":id")
   get(@CurrentUserParam() user: CurrentUser, @Param("id") id: string) {
-    return this.collectionsService.get(user.id, id);
+    return this.collectionsService.getReadable(user.id, id);
   }
 
   @Put(":id")
@@ -41,5 +45,20 @@ export class CollectionsController {
     @Body() body: { bookmarkAction?: "uncategorize" | "move" | "delete"; targetCollectionId?: string }
   ) {
     return this.collectionsService.delete(user.id, id, body);
+  }
+
+  @Post(":id/shares")
+  share(@CurrentUserParam() user: CurrentUser, @Param("id") id: string, @Body() body: { email?: string }) {
+    return this.collectionsService.share(user.id, id, body);
+  }
+
+  @Get(":id/shares")
+  listShares(@CurrentUserParam() user: CurrentUser, @Param("id") id: string) {
+    return this.collectionsService.listShares(user.id, id);
+  }
+
+  @Delete(":id/shares/:shareId")
+  revokeShare(@CurrentUserParam() user: CurrentUser, @Param("id") id: string, @Param("shareId") shareId: string) {
+    return this.collectionsService.revokeShare(user.id, id, shareId);
   }
 }

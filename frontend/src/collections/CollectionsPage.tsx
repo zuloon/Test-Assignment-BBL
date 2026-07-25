@@ -18,16 +18,20 @@ import { Pencil, Trash2 } from "lucide-react";
 import { FormEvent, useEffect, useState } from "react";
 import {
   Collection,
+  CollectionShare,
   DeleteCollectionAction,
   createCollection,
   deleteCollection,
   fetchCollections,
+  fetchCollectionShares,
+  revokeCollectionShare,
+  shareCollection,
   updateCollection
 } from "./collectionsApi";
 
 type LoadState =
   | { type: "loading" }
-  | { type: "ready"; collections: Collection[] }
+  | { type: "ready"; collections: Collection[]; sharedCollections: Collection[] }
   | { type: "error"; message: string };
 
 export function CollectionsPage() {
@@ -40,18 +44,25 @@ export function CollectionsPage() {
   const [deleteMode, setDeleteMode] = useState<"uncategorize" | "move" | "delete">("uncategorize");
   const [moveTargetId, setMoveTargetId] = useState("");
   const [deleteError, setDeleteError] = useState<string | null>(null);
+  const [shareTarget, setShareTarget] = useState<Collection | null>(null);
+  const [shareEmail, setShareEmail] = useState("");
+  const [shares, setShares] = useState<CollectionShare[]>([]);
+  const [shareError, setShareError] = useState<string | null>(null);
 
   async function loadCollections(nextFilter = filter) {
     if (!isAuthenticated) {
-      setState({ type: "ready", collections: [] });
+      setState({ type: "ready", collections: [], sharedCollections: [] });
       return;
     }
 
     setState({ type: "loading" });
 
     try {
-      const collections = await fetchCollections(getAccessTokenSilently, nextFilter.trim() || undefined);
-      setState({ type: "ready", collections });
+      const [collections, sharedCollections] = await Promise.all([
+        fetchCollections(getAccessTokenSilently, nextFilter.trim() || undefined),
+        fetchCollections(getAccessTokenSilently, undefined, "shared")
+      ]);
+      setState({ type: "ready", collections, sharedCollections });
     } catch (error) {
       setState({
         type: "error",
@@ -121,6 +132,36 @@ export function CollectionsPage() {
     } catch (error) {
       setDeleteError(error instanceof Error ? error.message : "Unable to delete collection");
     }
+  }
+
+  async function startShare(collection: Collection) {
+    setShareTarget(collection);
+    setShareEmail("");
+    setShareError(null);
+    setShares(await fetchCollectionShares(getAccessTokenSilently, collection.id));
+  }
+
+  async function submitShare() {
+    if (!shareTarget) {
+      return;
+    }
+
+    try {
+      await shareCollection(getAccessTokenSilently, shareTarget.id, shareEmail);
+      setShareEmail("");
+      setShares(await fetchCollectionShares(getAccessTokenSilently, shareTarget.id));
+    } catch (error) {
+      setShareError(error instanceof Error ? error.message : "Unable to share collection");
+    }
+  }
+
+  async function revokeShare(share: CollectionShare) {
+    if (!shareTarget) {
+      return;
+    }
+
+    await revokeCollectionShare(getAccessTokenSilently, shareTarget.id, share.id);
+    setShares(await fetchCollectionShares(getAccessTokenSilently, shareTarget.id));
   }
 
   if (!isAuthenticated) {
@@ -225,10 +266,42 @@ export function CollectionsPage() {
                 <IconButton aria-label={`Edit ${collection.name}`} onClick={() => startEdit(collection)}>
                   <Pencil size={18} />
                 </IconButton>
+                <Button size="small" onClick={() => void startShare(collection)}>
+                  Share
+                </Button>
                 <IconButton aria-label={`Delete ${collection.name}`} onClick={() => startDelete(collection)}>
                   <Trash2 size={18} />
                 </IconButton>
               </Stack>
+            </Stack>
+          ))}
+        </Stack>
+      ) : null}
+
+      {state.type === "ready" && state.sharedCollections.length > 0 ? (
+        <Stack spacing={1.5}>
+          <Typography variant="h6">Shared with me</Typography>
+          {state.sharedCollections.map((collection) => (
+            <Stack
+              key={collection.id}
+              direction="row"
+              sx={{
+                alignItems: "center",
+                justifyContent: "space-between",
+                border: "1px solid",
+                borderColor: "divider",
+                borderRadius: 1,
+                bgcolor: "background.paper",
+                px: 2,
+                py: 1.5
+              }}
+            >
+              <Box>
+                <Typography sx={{ fontWeight: 600 }}>{collection.name}</Typography>
+                <Typography variant="body2" color="text.secondary">
+                  Owner {collection.owner?.email ?? collection.ownerId} - read-only
+                </Typography>
+              </Box>
             </Stack>
           ))}
         </Stack>
@@ -286,6 +359,48 @@ export function CollectionsPage() {
           <Button color={deleteMode === "delete" ? "error" : "primary"} variant="contained" onClick={() => void confirmDelete()}>
             Delete collection
           </Button>
+        </DialogActions>
+      </Dialog>
+
+      <Dialog open={shareTarget !== null} onClose={() => setShareTarget(null)} fullWidth maxWidth="sm">
+        <DialogTitle>Share collection</DialogTitle>
+        <DialogContent>
+          <Stack spacing={2} sx={{ pt: 1 }}>
+            <Typography>{shareTarget?.name}</Typography>
+            <Stack direction={{ xs: "column", sm: "row" }} spacing={1.5}>
+              <TextField
+                label="Recipient email"
+                value={shareEmail}
+                onChange={(event) => {
+                  setShareEmail(event.target.value);
+                  setShareError(null);
+                }}
+                size="small"
+                sx={{ flex: 1 }}
+              />
+              <Button variant="contained" onClick={() => void submitShare()}>
+                Share
+              </Button>
+            </Stack>
+            {shares.length > 0 ? (
+              <Stack spacing={1}>
+                {shares.map((share) => (
+                  <Stack key={share.id} direction="row" sx={{ alignItems: "center", justifyContent: "space-between" }}>
+                    <Typography>{share.sharedWithUser.email}</Typography>
+                    <Button size="small" color="error" onClick={() => void revokeShare(share)}>
+                      Revoke
+                    </Button>
+                  </Stack>
+                ))}
+              </Stack>
+            ) : (
+              <Alert severity="info">No active shares.</Alert>
+            )}
+            {shareError ? <Alert severity="error">{shareError}</Alert> : null}
+          </Stack>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setShareTarget(null)}>Close</Button>
         </DialogActions>
       </Dialog>
     </Stack>
