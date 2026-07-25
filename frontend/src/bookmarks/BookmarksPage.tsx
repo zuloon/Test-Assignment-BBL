@@ -47,8 +47,8 @@ export function BookmarksPage() {
   }
 
   useEffect(() => {
-    void loadData();
-  }, [isAuthenticated]);
+    void loadData(filterCollectionId);
+  }, [filterCollectionId, isAuthenticated]);
 
   async function submitBookmark(event: FormEvent) {
     event.preventDefault();
@@ -170,9 +170,6 @@ export function BookmarksPage() {
               ))
             : null}
         </TextField>
-        <Button variant="outlined" onClick={() => void loadData()}>
-          Apply
-        </Button>
       </Stack>
 
       {state.type === "loading" ? (

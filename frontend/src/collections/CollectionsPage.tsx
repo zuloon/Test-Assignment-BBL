@@ -72,8 +72,12 @@ export function CollectionsPage() {
   }
 
   useEffect(() => {
-    void loadCollections();
-  }, [isAuthenticated]);
+    const timeoutId = window.setTimeout(() => {
+      void loadCollections(filter);
+    }, 300);
+
+    return () => window.clearTimeout(timeoutId);
+  }, [filter, isAuthenticated]);
 
   async function submitCollection(event: FormEvent) {
     event.preventDefault();
@@ -221,9 +225,6 @@ export function CollectionsPage() {
           size="small"
           sx={{ minWidth: 280 }}
         />
-        <Button variant="outlined" onClick={() => void loadCollections()}>
-          Apply
-        </Button>
       </Stack>
 
       {state.type === "loading" ? (
