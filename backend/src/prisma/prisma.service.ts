@@ -1,11 +1,5 @@
 import { Injectable, OnModuleDestroy, OnModuleInit } from "@nestjs/common";
 import { PrismaClient } from "@prisma/client";
-import { resolve } from "node:path";
-
-function defaultDatabaseUrl() {
-  const databasePath = resolve(__dirname, "../../prisma/dev.db").replace(/\\/g, "/");
-  return `file:${databasePath}`;
-}
 
 @Injectable()
 export class PrismaService extends PrismaClient implements OnModuleInit, OnModuleDestroy {
@@ -13,7 +7,7 @@ export class PrismaService extends PrismaClient implements OnModuleInit, OnModul
     super({
       datasources: {
         db: {
-          url: process.env.DATABASE_URL ?? defaultDatabaseUrl()
+          url: process.env.DATABASE_URL ?? "file:./dev.db"
         }
       }
     });

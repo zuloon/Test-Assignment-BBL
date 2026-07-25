@@ -18,7 +18,7 @@ export function AppAuthProvider({ children }: AppAuthProviderProps) {
         redirect_uri: config.redirectUri,
         scope: "openid profile email"
       }}
-      cacheLocation="memory"
+      cacheLocation="localstorage"
     >
       {children}
     </Auth0Provider>

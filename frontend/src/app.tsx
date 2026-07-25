@@ -1,6 +1,7 @@
 import { CssBaseline, ThemeProvider, createTheme } from "@mui/material";
 import { BrowserRouter, Route, Routes } from "react-router";
 import { AppAuthProvider } from "./auth/AuthProvider";
+import { CollectionsPage } from "./collections/CollectionsPage";
 import { AppLayout } from "./shared/layout/AppLayout";
 import { HealthPage } from "./health/HealthPage";
 import { MePage } from "./me/MePage";
@@ -32,13 +33,15 @@ export function App() {
           <AppLayout
             navItems={[
               { label: "Status", to: "/" },
-              { label: "Account", to: "/me" }
+              { label: "Account", to: "/me" },
+              { label: "Collections", to: "/collections" }
             ]}
           >
             <Routes>
               <Route path="/" element={<HealthPage />} />
               <Route path="/callback" element={<MePage />} />
               <Route path="/me" element={<MePage />} />
+              <Route path="/collections" element={<CollectionsPage />} />
             </Routes>
           </AppLayout>
         </BrowserRouter>

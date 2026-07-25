@@ -1,5 +1,6 @@
 import { Box, Button, Container, Stack, Typography } from "@mui/material";
 import { ReactNode } from "react";
+import { useNavigate } from "react-router";
 
 type AppLayoutProps = {
   children: ReactNode;
@@ -7,6 +8,8 @@ type AppLayoutProps = {
 };
 
 export function AppLayout({ children, navItems = [] }: AppLayoutProps) {
+  const navigate = useNavigate();
+
   return (
     <Box sx={{ minHeight: "100vh", bgcolor: "background.default" }}>
       <Box component="header" sx={{ bgcolor: "background.paper", borderBottom: "1px solid", borderColor: "divider" }}>
@@ -17,7 +20,7 @@ export function AppLayout({ children, navItems = [] }: AppLayoutProps) {
             </Typography>
             <Stack component="nav" direction="row" spacing={1}>
               {navItems.map((item) => (
-                <Button key={item.to} href={item.to} size="small">
+                <Button key={item.to} size="small" onClick={() => navigate(item.to)}>
                   {item.label}
                 </Button>
               ))}

@@ -23,6 +23,14 @@ T02 login/current-user adds:
 - `/me` endpoint,
 - frontend Auth0 login/logout and current-user screen.
 
+During development the frontend stores Auth0 SDK cache in `localstorage` so page refreshes do not force a new login. This improves local iteration but has a higher XSS exposure than memory-only token caching.
+
+T03 collections adds:
+
+- owner-scoped backend collections CRUD,
+- frontend `/collections` page,
+- create/edit/delete/filter collection workflows.
+
 ## Project Shape
 
 ```text

@@ -15,6 +15,7 @@
     "@mui/material": "^9.2.0",
     "@mui/material-pigment-css": "^9.2.0",
     "@vitejs/plugin-react": "^5.2.0",
+    "lucide-react": "^1.26.0",
     "react": "^19.2.8",
     "react-dom": "^19.2.8",
     "react-router": "^8.3.0"
