@@ -21,6 +21,12 @@ export function updateCollection(getAccessToken: AccessTokenProvider, id: string
   return apiPut<Collection>(`/collections/${id}`, getAccessToken, { name });
 }
 
-export function deleteCollection(getAccessToken: AccessTokenProvider, id: string) {
-  return apiDelete<{ deleted: true }>(`/collections/${id}`, getAccessToken);
+export type DeleteCollectionAction =
+  | { bookmarkAction?: undefined }
+  | { bookmarkAction: "uncategorize" }
+  | { bookmarkAction: "delete" }
+  | { bookmarkAction: "move"; targetCollectionId: string };
+
+export function deleteCollection(getAccessToken: AccessTokenProvider, id: string, action?: DeleteCollectionAction) {
+  return apiDelete<{ deleted: true }>(`/collections/${id}`, getAccessToken, action);
 }

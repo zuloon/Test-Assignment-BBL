@@ -1,8 +1,29 @@
 import { useAuth0 } from "@auth0/auth0-react";
-import { Alert, Box, Button, CircularProgress, IconButton, Stack, TextField, Typography } from "@mui/material";
+import {
+  Alert,
+  Box,
+  Button,
+  CircularProgress,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogTitle,
+  IconButton,
+  MenuItem,
+  Stack,
+  TextField,
+  Typography
+} from "@mui/material";
 import { Pencil, Trash2 } from "lucide-react";
 import { FormEvent, useEffect, useState } from "react";
-import { Collection, createCollection, deleteCollection, fetchCollections, updateCollection } from "./collectionsApi";
+import {
+  Collection,
+  DeleteCollectionAction,
+  createCollection,
+  deleteCollection,
+  fetchCollections,
+  updateCollection
+} from "./collectionsApi";
 
 type LoadState =
   | { type: "loading" }
@@ -15,6 +36,10 @@ export function CollectionsPage() {
   const [name, setName] = useState("");
   const [filter, setFilter] = useState("");
   const [editing, setEditing] = useState<Collection | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<Collection | null>(null);
+  const [deleteMode, setDeleteMode] = useState<"uncategorize" | "move" | "delete">("uncategorize");
+  const [moveTargetId, setMoveTargetId] = useState("");
+  const [deleteError, setDeleteError] = useState<string | null>(null);
 
   async function loadCollections(nextFilter = filter) {
     if (!isAuthenticated) {
@@ -58,14 +83,44 @@ export function CollectionsPage() {
     await loadCollections();
   }
 
-  async function removeCollection(collection: Collection) {
-    await deleteCollection(getAccessTokenSilently, collection.id);
+  async function removeCollection(collection: Collection, action?: DeleteCollectionAction) {
+    await deleteCollection(getAccessTokenSilently, collection.id, action);
     await loadCollections();
   }
 
   function startEdit(collection: Collection) {
     setEditing(collection);
     setName(collection.name);
+  }
+
+  function startDelete(collection: Collection) {
+    setDeleteTarget(collection);
+    setDeleteMode("uncategorize");
+    setMoveTargetId("");
+    setDeleteError(null);
+  }
+
+  async function confirmDelete() {
+    if (!deleteTarget) {
+      return;
+    }
+
+    const action =
+      deleteMode === "move"
+        ? ({ bookmarkAction: "move", targetCollectionId: moveTargetId } as const)
+        : ({ bookmarkAction: deleteMode } as const);
+
+    if (deleteMode === "move" && !moveTargetId) {
+      setDeleteError("Choose a collection to move bookmarks into.");
+      return;
+    }
+
+    try {
+      await removeCollection(deleteTarget, action);
+      setDeleteTarget(null);
+    } catch (error) {
+      setDeleteError(error instanceof Error ? error.message : "Unable to delete collection");
+    }
   }
 
   if (!isAuthenticated) {
@@ -170,7 +225,7 @@ export function CollectionsPage() {
                 <IconButton aria-label={`Edit ${collection.name}`} onClick={() => startEdit(collection)}>
                   <Pencil size={18} />
                 </IconButton>
-                <IconButton aria-label={`Delete ${collection.name}`} onClick={() => void removeCollection(collection)}>
+                <IconButton aria-label={`Delete ${collection.name}`} onClick={() => startDelete(collection)}>
                   <Trash2 size={18} />
                 </IconButton>
               </Stack>
@@ -178,6 +233,61 @@ export function CollectionsPage() {
           ))}
         </Stack>
       ) : null}
+
+      <Dialog open={deleteTarget !== null} onClose={() => setDeleteTarget(null)} fullWidth maxWidth="sm">
+        <DialogTitle>Delete collection</DialogTitle>
+        <DialogContent>
+          <Stack spacing={2} sx={{ pt: 1 }}>
+            <Typography>
+              Choose what should happen to bookmarks in {deleteTarget?.name}. Empty collections will be deleted
+              immediately with any option.
+            </Typography>
+            <TextField
+              select
+              label="Bookmark action"
+              value={deleteMode}
+              onChange={(event) => {
+                setDeleteMode(event.target.value as "uncategorize" | "move" | "delete");
+                setDeleteError(null);
+              }}
+              size="small"
+            >
+              <MenuItem value="uncategorize">Make bookmarks uncategorized</MenuItem>
+              <MenuItem value="move">Move bookmarks to another collection</MenuItem>
+              <MenuItem value="delete">Delete bookmarks too</MenuItem>
+            </TextField>
+            {deleteMode === "move" ? (
+              <TextField
+                select
+                label="Move to"
+                value={moveTargetId}
+                onChange={(event) => setMoveTargetId(event.target.value)}
+                size="small"
+              >
+                {state.type === "ready"
+                  ? state.collections
+                      .filter((collection) => collection.id !== deleteTarget?.id)
+                      .map((collection) => (
+                        <MenuItem key={collection.id} value={collection.id}>
+                          {collection.name}
+                        </MenuItem>
+                      ))
+                  : null}
+              </TextField>
+            ) : null}
+            {deleteMode === "delete" ? (
+              <Alert severity="warning">Bookmarks in this collection will be permanently deleted.</Alert>
+            ) : null}
+            {deleteError ? <Alert severity="error">{deleteError}</Alert> : null}
+          </Stack>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setDeleteTarget(null)}>Cancel</Button>
+          <Button color={deleteMode === "delete" ? "error" : "primary"} variant="contained" onClick={() => void confirmDelete()}>
+            Delete collection
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Stack>
   );
 }

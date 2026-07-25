@@ -20,9 +20,17 @@ export async function apiPut<T>(path: string, getAccessToken: AccessTokenProvide
   });
 }
 
-export async function apiDelete<T>(path: string, getAccessToken: AccessTokenProvider): Promise<T> {
+export async function apiPatch<T>(path: string, getAccessToken: AccessTokenProvider, body: unknown): Promise<T> {
   return apiRequest<T>(path, getAccessToken, {
-    method: "DELETE"
+    method: "PATCH",
+    body: JSON.stringify(body)
+  });
+}
+
+export async function apiDelete<T>(path: string, getAccessToken: AccessTokenProvider, body?: unknown): Promise<T> {
+  return apiRequest<T>(path, getAccessToken, {
+    method: "DELETE",
+    ...(body !== undefined ? { body: JSON.stringify(body) } : {})
   });
 }
 

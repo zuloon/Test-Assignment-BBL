@@ -1,8 +1,13 @@
-import { Inject, Injectable, NotFoundException } from "@nestjs/common";
+import { ConflictException, Inject, Injectable, NotFoundException } from "@nestjs/common";
 import { PrismaService } from "../prisma/prisma.service";
 
 type CollectionInput = {
   name?: string;
+};
+
+type DeleteCollectionInput = {
+  bookmarkAction?: "uncategorize" | "move" | "delete";
+  targetCollectionId?: string;
 };
 
 @Injectable()
@@ -62,8 +67,42 @@ export class CollectionsService {
     });
   }
 
-  async delete(ownerId: string, id: string) {
+  async delete(ownerId: string, id: string, input: DeleteCollectionInput = {}) {
     await this.get(ownerId, id);
+
+    const bookmarkCount = await this.prisma.bookmark.count({
+      where: { ownerId, collectionId: id }
+    });
+
+    if (bookmarkCount > 0 && !input.bookmarkAction) {
+      throw new ConflictException("Collection contains bookmarks; choose how to handle them");
+    }
+
+    if (input.bookmarkAction === "move") {
+      if (!input.targetCollectionId || input.targetCollectionId === id) {
+        throw new NotFoundException("Collection not found");
+      }
+
+      await this.get(ownerId, input.targetCollectionId);
+      await this.prisma.bookmark.updateMany({
+        where: { ownerId, collectionId: id },
+        data: { collectionId: input.targetCollectionId }
+      });
+    }
+
+    if (input.bookmarkAction === "uncategorize") {
+      await this.prisma.bookmark.updateMany({
+        where: { ownerId, collectionId: id },
+        data: { collectionId: null }
+      });
+    }
+
+    if (input.bookmarkAction === "delete") {
+      await this.prisma.bookmark.deleteMany({
+        where: { ownerId, collectionId: id }
+      });
+    }
+
     await this.prisma.collection.delete({ where: { id } });
     return { deleted: true };
   }

@@ -1,6 +1,7 @@
 import { CssBaseline, ThemeProvider, createTheme } from "@mui/material";
 import { BrowserRouter, Route, Routes } from "react-router";
 import { AppAuthProvider } from "./auth/AuthProvider";
+import { BookmarksPage } from "./bookmarks/BookmarksPage";
 import { CollectionsPage } from "./collections/CollectionsPage";
 import { AppLayout } from "./shared/layout/AppLayout";
 import { HealthPage } from "./health/HealthPage";
@@ -34,7 +35,8 @@ export function App() {
             navItems={[
               { label: "Status", to: "/" },
               { label: "Account", to: "/me" },
-              { label: "Collections", to: "/collections" }
+              { label: "Collections", to: "/collections" },
+              { label: "Bookmarks", to: "/bookmarks" }
             ]}
           >
             <Routes>
@@ -42,6 +44,7 @@ export function App() {
               <Route path="/callback" element={<MePage />} />
               <Route path="/me" element={<MePage />} />
               <Route path="/collections" element={<CollectionsPage />} />
+              <Route path="/bookmarks" element={<BookmarksPage />} />
             </Routes>
           </AppLayout>
         </BrowserRouter>

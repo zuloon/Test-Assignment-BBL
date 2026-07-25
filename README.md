@@ -31,6 +31,13 @@ T03 collections adds:
 - frontend `/collections` page,
 - create/edit/delete/filter collection workflows.
 
+T04/T05 adds:
+
+- owner-scoped backend bookmarks CRUD,
+- frontend `/bookmarks` page,
+- nullable bookmark collection assignment,
+- safe collection deletion actions for non-empty collections.
+
 ## Project Shape
 
 ```text

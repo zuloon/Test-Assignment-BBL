@@ -35,7 +35,11 @@ export class CollectionsController {
   }
 
   @Delete(":id")
-  delete(@CurrentUserParam() user: CurrentUser, @Param("id") id: string) {
-    return this.collectionsService.delete(user.id, id);
+  delete(
+    @CurrentUserParam() user: CurrentUser,
+    @Param("id") id: string,
+    @Body() body: { bookmarkAction?: "uncategorize" | "move" | "delete"; targetCollectionId?: string }
+  ) {
+    return this.collectionsService.delete(user.id, id, body);
   }
 }
