@@ -210,13 +210,6 @@ Bearer test:auth0|user-b
 
 This allows backend tests to prove owner isolation and sharing behavior without requiring two real Auth0 users.
 
-## Known Gaps
-
-- Backend e2e tests cover auth, owner privacy, bookmark ownership, collection delete actions, and read-only sharing.
-- Frontend automated tests are not included yet.
-- Local SQLite bootstrap is manual SQL because `prisma db push` failed locally on this Windows machine.
-- The frontend bundle is above Vite's default warning threshold after Auth0 and MUI.
-- Share roles store `read` and `edit`, but shared-user mutation remains disabled until an edit-role workflow is explicitly implemented and tested.
 
 ## Product Invariant
 
