@@ -1,5 +1,21 @@
 import { useAuth0 } from "@auth0/auth0-react";
-import { Alert, Box, Button, Chip, CircularProgress, Stack, TextField, Typography } from "@mui/material";
+import {
+  Alert,
+  Box,
+  Button,
+  Card,
+  CardContent,
+  Chip,
+  CircularProgress,
+  IconButton,
+  InputAdornment,
+  Paper,
+  Stack,
+  TextField,
+  Tooltip,
+  Typography
+} from "@mui/material";
+import { Bookmark as BookmarkIcon, Check, Copy, ExternalLink, Folder, Layers, Search, Users } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { Bookmark, fetchBookmarks, fetchCollectionBookmarks } from "../bookmarks/bookmarksApi";
 import { Collection, fetchCollections } from "../collections/collectionsApi";
@@ -22,6 +38,7 @@ export function AllPage() {
   const { getAccessTokenSilently, isAuthenticated, loginWithRedirect } = useAuth0();
   const [state, setState] = useState<LoadState>({ type: "loading" });
   const [search, setSearch] = useState("");
+  const [copiedId, setCopiedId] = useState<string | null>(null);
 
   async function loadData() {
     if (!isAuthenticated) {
@@ -110,18 +127,37 @@ export function AllPage() {
     };
   }, [search, state]);
 
+  function copyToClipboard(bookmark: Bookmark) {
+    void navigator.clipboard.writeText(bookmark.url);
+    setCopiedId(bookmark.id);
+    setTimeout(() => setCopiedId(null), 2000);
+  }
+
+  function getDomain(urlStr: string) {
+    try {
+      const parsed = new URL(urlStr.startsWith("http") ? urlStr : `https://${urlStr}`);
+      return parsed.hostname;
+    } catch {
+      return urlStr;
+    }
+  }
+
   if (!isAuthenticated) {
     return (
-      <Alert
-        severity="info"
-        action={
-          <Button color="inherit" size="small" onClick={() => void loginWithRedirect()}>
-            Log in
+      <Paper sx={{ p: 4, textAlign: "center", borderRadius: 4 }}>
+        <Stack spacing={2} sx={{ alignItems: "center" }}>
+          <Box sx={{ p: 2, borderRadius: "50%", bgcolor: "#eff6ff", color: "#2563eb" }}>
+            <Layers size={32} />
+          </Box>
+          <Typography variant="h5">Sign in to View All Vault Items</Typography>
+          <Typography color="text.secondary" sx={{ maxWidth: 400 }}>
+            Log in with Auth0 to explore all private and shared collections in your vault.
+          </Typography>
+          <Button variant="contained" onClick={() => void loginWithRedirect()} sx={{ px: 4 }}>
+            Log in with Auth0
           </Button>
-        }
-      >
-        Log in to view all bookmarks.
-      </Alert>
+        </Stack>
+      </Paper>
     );
   }
 
@@ -129,23 +165,37 @@ export function AllPage() {
     <Stack spacing={3}>
       <Box>
         <Typography variant="h4" component="h1" gutterBottom>
-          All
+          All Vault
         </Typography>
-        <Typography color="text.secondary">Collections with their bookmarks.</Typography>
+        <Typography color="text.secondary">
+          Overview of all collections and uncategorized bookmarks in one place.
+        </Typography>
       </Box>
 
-      <TextField
-        label="Search"
-        value={search}
-        onChange={(event) => setSearch(event.target.value)}
-        size="small"
-        sx={{ maxWidth: 360 }}
-      />
+      {/* Toolbar */}
+      <Stack direction={{ xs: "column", sm: "row" }} spacing={2} sx={{ justifyContent: "space-between", alignItems: { sm: "center" } }}>
+        <TextField
+          placeholder="Search all titles, URLs or notes..."
+          value={search}
+          onChange={(event) => setSearch(event.target.value)}
+          size="small"
+          sx={{ minWidth: { sm: 360 } }}
+          slotProps={{
+            input: {
+              startAdornment: (
+                <InputAdornment position="start">
+                  <Search size={16} color="#64748b" />
+                </InputAdornment>
+              )
+            }
+          }}
+        />
+      </Stack>
 
       {filteredState.type === "loading" ? (
-        <Stack direction="row" spacing={1.5} role="status" sx={{ alignItems: "center" }}>
-          <CircularProgress size={20} />
-          <Typography>Loading bookmarks</Typography>
+        <Stack direction="row" spacing={1.5} role="status" sx={{ alignItems: "center", py: 4, justifyContent: "center" }}>
+          <CircularProgress size={24} />
+          <Typography color="text.secondary">Loading all bookmarks...</Typography>
         </Stack>
       ) : null}
 
@@ -154,85 +204,255 @@ export function AllPage() {
       {filteredState.type === "ready" &&
       filteredState.collections.length === 0 &&
       filteredState.uncategorized.length === 0 ? (
-        <Alert severity="info">No bookmarks found.</Alert>
+        <Paper sx={{ p: 5, textAlign: "center", bgcolor: "#ffffff", borderRadius: 4, border: "1px dashed #cbd5e1" }}>
+          <Stack spacing={2} sx={{ alignItems: "center" }}>
+            <Box sx={{ p: 2, borderRadius: "50%", bgcolor: "#f1f5f9", color: "#94a3b8" }}>
+              <Layers size={32} />
+            </Box>
+            <Typography variant="h6" color="text.secondary">
+              No bookmarks in your vault
+            </Typography>
+            <Typography variant="body2" color="text.secondary">
+              {search ? "No matching bookmarks found." : "Add bookmarks or collections to see them listed here."}
+            </Typography>
+          </Stack>
+        </Paper>
       ) : null}
 
       {filteredState.type === "ready" ? (
-        <Stack spacing={2}>
+        <Stack spacing={3}>
           {filteredState.collections.map((collection) => (
-            <Stack
-              key={collection.id}
-              spacing={1}
-              sx={{
-                border: "1px solid",
-                borderColor: "divider",
-                borderRadius: 1,
-                bgcolor: "background.paper",
-                px: 2,
-                py: 1.5
-              }}
-            >
-              <Stack direction="row" spacing={1} sx={{ alignItems: "center", justifyContent: "space-between" }}>
-                <Typography variant="h6">{collection.name}</Typography>
-                <Stack direction="row" spacing={1}>
-                  {collection.shared ? <Chip size="small" label="Shared" /> : null}
-                  <Chip size="small" label={`${collection.bookmarks.length} bookmarks`} />
-                </Stack>
-              </Stack>
-              {collection.bookmarks.length > 0 ? (
-                <Stack spacing={1}>
-                  {collection.bookmarks.map((bookmark) => (
-                    <Box key={bookmark.id} sx={{ borderTop: "1px solid", borderColor: "divider", pt: 1 }}>
-                      <Typography sx={{ fontWeight: 600 }}>{bookmark.title}</Typography>
-                      <Typography variant="body2" color="text.secondary">
-                        {bookmark.url}
+            <Card key={collection.id}>
+              <CardContent sx={{ p: 3 }}>
+                <Stack spacing={2}>
+                  <Stack direction="row" sx={{ justifyContent: "space-between", alignItems: "center" }}>
+                    <Stack direction="row" spacing={1.5} sx={{ alignItems: "center" }}>
+                      <Box
+                        sx={{
+                          width: 36,
+                          height: 36,
+                          borderRadius: "10px",
+                          bgcolor: collection.shared ? "#e0e7ff" : "#f5f3ff",
+                          color: collection.shared ? "#4338ca" : "#7c3aed",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center"
+                        }}
+                      >
+                        <Folder size={20} />
+                      </Box>
+                      <Typography variant="h6" sx={{ fontSize: "1.1rem", fontWeight: 700 }}>
+                        {collection.name}
                       </Typography>
-                      {bookmark.notes ? (
-                        <Typography variant="body2" color="text.secondary">
-                          {bookmark.notes}
-                        </Typography>
+                    </Stack>
+
+                    <Stack direction="row" spacing={1}>
+                      {collection.shared ? (
+                        <Chip icon={<Users size={12} />} size="small" label="Shared" sx={{ bgcolor: "#e0e7ff", color: "#4338ca", fontWeight: 600 }} />
                       ) : null}
-                    </Box>
-                  ))}
+                      <Chip size="small" label={`${collection.bookmarks.length} Bookmarks`} variant="outlined" sx={{ fontWeight: 600 }} />
+                    </Stack>
+                  </Stack>
+
+                  {collection.bookmarks.length > 0 ? (
+                    <Stack spacing={1.5} sx={{ pt: 1 }}>
+                      {collection.bookmarks.map((bookmark) => {
+                        const domain = getDomain(bookmark.url);
+                        const isCopied = copiedId === bookmark.id;
+
+                        return (
+                          <Paper
+                            key={bookmark.id}
+                            variant="outlined"
+                            sx={{
+                              p: 2,
+                              borderRadius: 3,
+                              borderColor: "#e2e8f0",
+                              bgcolor: "#f8fafc",
+                              transition: "all 0.15s ease",
+                              "&:hover": { bgcolor: "#ffffff", borderColor: "#cbd5e1" }
+                            }}
+                          >
+                            <Stack direction="row" spacing={2} sx={{ justifyContent: "space-between", alignItems: "flex-start" }}>
+                              <Stack spacing={0.5} sx={{ flex: 1 }}>
+                                <Stack direction="row" spacing={1} sx={{ alignItems: "center" }}>
+                                  <Box
+                                    sx={{
+                                      width: 20,
+                                      height: 20,
+                                      borderRadius: "4px",
+                                      bgcolor: "#ffffff",
+                                      display: "flex",
+                                      alignItems: "center",
+                                      justifyContent: "center",
+                                      overflow: "hidden"
+                                    }}
+                                  >
+                                    <img
+                                      src={`https://www.google.com/s2/favicons?domain=${domain}&sz=32`}
+                                      alt=""
+                                      style={{ width: 12, height: 12 }}
+                                      onError={(e) => { (e.target as HTMLElement).style.display = "none"; }}
+                                    />
+                                  </Box>
+                                  <Typography variant="body2" sx={{ fontWeight: 700, color: "#0f172a" }}>
+                                    {bookmark.title}
+                                  </Typography>
+                                </Stack>
+
+                                <Typography variant="caption" color="text.secondary" sx={{ wordBreak: "break-all" }}>
+                                  {bookmark.url}
+                                </Typography>
+
+                                {bookmark.notes ? (
+                                  <Typography variant="body2" color="text.secondary" sx={{ fontSize: "0.85rem", mt: 0.5 }}>
+                                    {bookmark.notes}
+                                  </Typography>
+                                ) : null}
+                              </Stack>
+
+                              <Stack direction="row" spacing={0.5}>
+                                <Tooltip title={isCopied ? "Copied!" : "Copy Link"}>
+                                  <IconButton size="small" onClick={() => copyToClipboard(bookmark)}>
+                                    {isCopied ? <Check size={16} color="#10b981" /> : <Copy size={16} color="#64748b" />}
+                                  </IconButton>
+                                </Tooltip>
+                                <Tooltip title="Open link">
+                                  <IconButton
+                                    size="small"
+                                    component="a"
+                                    href={bookmark.url.startsWith("http") ? bookmark.url : `https://${bookmark.url}`}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                  >
+                                    <ExternalLink size={16} color="#64748b" />
+                                  </IconButton>
+                                </Tooltip>
+                              </Stack>
+                            </Stack>
+                          </Paper>
+                        );
+                      })}
+                    </Stack>
+                  ) : (
+                    <Typography variant="body2" color="text.secondary" sx={{ py: 1, fontStyle: "italic" }}>
+                      No bookmarks in this collection yet.
+                    </Typography>
+                  )}
                 </Stack>
-              ) : (
-                <Typography variant="body2" color="text.secondary">
-                  No bookmarks in this collection.
-                </Typography>
-              )}
-            </Stack>
+              </CardContent>
+            </Card>
           ))}
 
           {filteredState.uncategorized.length > 0 ? (
-            <Stack
-              spacing={1}
-              sx={{
-                border: "1px solid",
-                borderColor: "divider",
-                borderRadius: 1,
-                bgcolor: "background.paper",
-                px: 2,
-                py: 1.5
-              }}
-            >
-              <Stack direction="row" spacing={1} sx={{ alignItems: "center", justifyContent: "space-between" }}>
-                <Typography variant="h6">Uncategorized</Typography>
-                <Chip size="small" label={`${filteredState.uncategorized.length} bookmarks`} />
-              </Stack>
-              {filteredState.uncategorized.map((bookmark) => (
-                <Box key={bookmark.id} sx={{ borderTop: "1px solid", borderColor: "divider", pt: 1 }}>
-                  <Typography sx={{ fontWeight: 600 }}>{bookmark.title}</Typography>
-                  <Typography variant="body2" color="text.secondary">
-                    {bookmark.url}
-                  </Typography>
-                  {bookmark.notes ? (
-                    <Typography variant="body2" color="text.secondary">
-                      {bookmark.notes}
-                    </Typography>
-                  ) : null}
-                </Box>
-              ))}
-            </Stack>
+            <Card>
+              <CardContent sx={{ p: 3 }}>
+                <Stack spacing={2}>
+                  <Stack direction="row" sx={{ justifyContent: "space-between", alignItems: "center" }}>
+                    <Stack direction="row" spacing={1.5} sx={{ alignItems: "center" }}>
+                      <Box
+                        sx={{
+                          width: 36,
+                          height: 36,
+                          borderRadius: "10px",
+                          bgcolor: "#f1f5f9",
+                          color: "#64748b",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center"
+                        }}
+                      >
+                        <BookmarkIcon size={20} />
+                      </Box>
+                      <Typography variant="h6" sx={{ fontSize: "1.1rem", fontWeight: 700 }}>
+                        Uncategorized Bookmarks
+                      </Typography>
+                    </Stack>
+                    <Chip size="small" label={`${filteredState.uncategorized.length} Bookmarks`} variant="outlined" sx={{ fontWeight: 600 }} />
+                  </Stack>
+
+                  <Stack spacing={1.5} sx={{ pt: 1 }}>
+                    {filteredState.uncategorized.map((bookmark) => {
+                      const domain = getDomain(bookmark.url);
+                      const isCopied = copiedId === bookmark.id;
+
+                      return (
+                        <Paper
+                          key={bookmark.id}
+                          variant="outlined"
+                          sx={{
+                            p: 2,
+                            borderRadius: 3,
+                            borderColor: "#e2e8f0",
+                            bgcolor: "#f8fafc",
+                            transition: "all 0.15s ease",
+                            "&:hover": { bgcolor: "#ffffff", borderColor: "#cbd5e1" }
+                          }}
+                        >
+                          <Stack direction="row" spacing={2} sx={{ justifyContent: "space-between", alignItems: "flex-start" }}>
+                            <Stack spacing={0.5} sx={{ flex: 1 }}>
+                              <Stack direction="row" spacing={1} sx={{ alignItems: "center" }}>
+                                <Box
+                                  sx={{
+                                    width: 20,
+                                    height: 20,
+                                    borderRadius: "4px",
+                                    bgcolor: "#ffffff",
+                                    display: "flex",
+                                    alignItems: "center",
+                                    justifyContent: "center",
+                                    overflow: "hidden"
+                                  }}
+                                >
+                                  <img
+                                    src={`https://www.google.com/s2/favicons?domain=${domain}&sz=32`}
+                                    alt=""
+                                    style={{ width: 12, height: 12 }}
+                                    onError={(e) => { (e.target as HTMLElement).style.display = "none"; }}
+                                  />
+                                </Box>
+                                <Typography variant="body2" sx={{ fontWeight: 700, color: "#0f172a" }}>
+                                  {bookmark.title}
+                                </Typography>
+                              </Stack>
+
+                              <Typography variant="caption" color="text.secondary" sx={{ wordBreak: "break-all" }}>
+                                {bookmark.url}
+                              </Typography>
+
+                              {bookmark.notes ? (
+                                <Typography variant="body2" color="text.secondary" sx={{ fontSize: "0.85rem", mt: 0.5 }}>
+                                  {bookmark.notes}
+                                </Typography>
+                              ) : null}
+                            </Stack>
+
+                            <Stack direction="row" spacing={0.5}>
+                              <Tooltip title={isCopied ? "Copied!" : "Copy Link"}>
+                                <IconButton size="small" onClick={() => copyToClipboard(bookmark)}>
+                                  {isCopied ? <Check size={16} color="#10b981" /> : <Copy size={16} color="#64748b" />}
+                                </IconButton>
+                              </Tooltip>
+                              <Tooltip title="Open link">
+                                <IconButton
+                                  size="small"
+                                  component="a"
+                                  href={bookmark.url.startsWith("http") ? bookmark.url : `https://${bookmark.url}`}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                >
+                                  <ExternalLink size={16} color="#64748b" />
+                                </IconButton>
+                              </Tooltip>
+                            </Stack>
+                          </Stack>
+                        </Paper>
+                      );
+                    })}
+                  </Stack>
+                </Stack>
+              </CardContent>
+            </Card>
           ) : null}
         </Stack>
       ) : null}

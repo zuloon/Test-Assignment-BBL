@@ -3,18 +3,25 @@ import {
   Alert,
   Box,
   Button,
+  Card,
+  CardContent,
+  Chip,
   CircularProgress,
   Dialog,
   DialogActions,
   DialogContent,
   DialogTitle,
+  Grid,
   IconButton,
+  InputAdornment,
   MenuItem,
+  Paper,
   Stack,
   TextField,
+  Tooltip,
   Typography
 } from "@mui/material";
-import { Pencil, Trash2 } from "lucide-react";
+import { Clock, Folder, FolderPlus, Mail, Pencil, Plus, Search, Share2, Trash2, UserCheck, Users, X } from "lucide-react";
 import { FormEvent, useEffect, useState } from "react";
 import {
   Collection,
@@ -50,6 +57,7 @@ export function CollectionsPage() {
   const [sharePermission, setSharePermission] = useState<SharePermission>("read");
   const [shares, setShares] = useState<CollectionShare[]>([]);
   const [shareError, setShareError] = useState<string | null>(null);
+  const [showCreate, setShowCreate] = useState(false);
 
   async function loadCollections(nextFilter = filter) {
     if (!isAuthenticated) {
@@ -97,6 +105,7 @@ export function CollectionsPage() {
     }
 
     setName("");
+    setShowCreate(false);
     await loadCollections();
   }
 
@@ -108,6 +117,7 @@ export function CollectionsPage() {
   function startEdit(collection: Collection) {
     setEditing(collection);
     setName(collection.name);
+    setShowCreate(true);
   }
 
   function startDelete(collection: Collection) {
@@ -174,155 +184,306 @@ export function CollectionsPage() {
 
   if (!isAuthenticated) {
     return (
-      <Alert
-        severity="info"
-        action={
-          <Button color="inherit" size="small" onClick={() => void loginWithRedirect()}>
-            Log in
+      <Paper sx={{ p: 4, textAlign: "center", borderRadius: 4 }}>
+        <Stack spacing={2} sx={{ alignItems: "center" }}>
+          <Box sx={{ p: 2, borderRadius: "50%", bgcolor: "#f5f3ff", color: "#7c3aed" }}>
+            <Folder size={32} />
+          </Box>
+          <Typography variant="h5">Sign in to Access Collections</Typography>
+          <Typography color="text.secondary" sx={{ maxWidth: 400 }}>
+            Organize bookmarks into collections with private tenant isolation. Log in to manage collections.
+          </Typography>
+          <Button variant="contained" onClick={() => void loginWithRedirect()} sx={{ px: 4 }}>
+            Log in with Auth0
           </Button>
-        }
-      >
-        Log in to manage collections.
-      </Alert>
+        </Stack>
+      </Paper>
     );
   }
 
   return (
     <Stack spacing={3}>
-      <Box>
-        <Typography variant="h4" component="h1" gutterBottom>
-          Collections
-        </Typography>
-        <Typography color="text.secondary">Create and manage your private bookmark collections.</Typography>
-      </Box>
-
-      <Stack component="form" direction={{ xs: "column", sm: "row" }} spacing={1.5} onSubmit={submitCollection}>
-        <TextField
-          label={editing ? "Collection name" : "New collection"}
-          value={name}
-          onChange={(event) => setName(event.target.value)}
-          size="small"
-          sx={{ minWidth: 280 }}
-        />
-        <Button type="submit" variant="contained">
-          {editing ? "Save" : "Create"}
-        </Button>
-        {editing ? (
-          <Button
-            type="button"
-            variant="text"
-            onClick={() => {
+      {/* Header */}
+      <Stack direction={{ xs: "column", sm: "row" }} spacing={2} sx={{ justifyContent: "space-between", alignItems: { sm: "center" } }}>
+        <Box>
+          <Typography variant="h4" component="h1">
+            Collections
+          </Typography>
+          <Typography color="text.secondary">
+            Create and manage your private bookmark collections.
+          </Typography>
+        </Box>
+        <Button
+          variant="contained"
+          startIcon={showCreate ? <X size={18} /> : <Plus size={18} />}
+          onClick={() => {
+            if (showCreate && editing) {
               setEditing(null);
               setName("");
-            }}
-          >
-            Cancel
-          </Button>
-        ) : null}
+            }
+            setShowCreate(!showCreate);
+          }}
+          sx={{ alignSelf: { xs: "flex-start", sm: "center" } }}
+        >
+          {showCreate ? "Close Form" : "New Collection"}
+        </Button>
       </Stack>
 
-      <Stack direction={{ xs: "column", sm: "row" }} spacing={1.5}>
+      {/* New / Edit Form */}
+      {showCreate ? (
+        <Card sx={{ bgcolor: "#ffffff", borderColor: editing ? "#818cf8" : "#e2e8f0" }}>
+          <CardContent sx={{ p: 3 }}>
+            <Typography variant="h6" sx={{ mb: 2, fontWeight: 700, display: "flex", alignItems: "center", gap: 1 }}>
+              {editing ? <Pencil size={18} color="#4f46e5" /> : <FolderPlus size={18} color="#4f46e5" />}
+              {editing ? "Edit Collection Name" : "Create New Collection"}
+            </Typography>
+            <Stack component="form" direction={{ xs: "column", sm: "row" }} spacing={1.5} onSubmit={submitCollection}>
+              <TextField
+                fullWidth
+                label="Collection Name"
+                placeholder="e.g. Work Tools, Reading List, Design Systems"
+                value={name}
+                onChange={(event) => setName(event.target.value)}
+                size="small"
+                required
+                slotProps={{
+                  input: {
+                    startAdornment: (
+                      <InputAdornment position="start">
+                        <Folder size={16} color="#64748b" />
+                      </InputAdornment>
+                    )
+                  }
+                }}
+              />
+              <Button type="submit" variant="contained" sx={{ minWidth: 120 }}>
+                {editing ? "Save" : "Create"}
+              </Button>
+              {editing ? (
+                <Button
+                  variant="outlined"
+                  onClick={() => {
+                    setEditing(null);
+                    setName("");
+                    setShowCreate(false);
+                  }}
+                >
+                  Cancel
+                </Button>
+              ) : null}
+            </Stack>
+          </CardContent>
+        </Card>
+      ) : null}
+
+      {/* Filter Toolbar */}
+      <Stack direction={{ xs: "column", sm: "row" }} spacing={2} sx={{ justifyContent: "space-between", alignItems: { sm: "center" } }}>
         <TextField
-          label="Filter by name"
+          placeholder="Filter collections by name..."
           value={filter}
           onChange={(event) => setFilter(event.target.value)}
           size="small"
-          sx={{ minWidth: 280 }}
+          sx={{ minWidth: { sm: 320 } }}
+          slotProps={{
+            input: {
+              startAdornment: (
+                <InputAdornment position="start">
+                  <Search size={16} color="#64748b" />
+                </InputAdornment>
+              )
+            }
+          }}
         />
+
+        {state.type === "ready" ? (
+          <Chip
+            label={`${state.collections.length} Collections`}
+            variant="outlined"
+            sx={{ fontWeight: 600, color: "#64748b", alignSelf: { xs: "flex-start", sm: "center" } }}
+          />
+        ) : null}
       </Stack>
 
+      {/* Loading state */}
       {state.type === "loading" ? (
-        <Stack direction="row" spacing={1.5} role="status" sx={{ alignItems: "center" }}>
-          <CircularProgress size={20} />
-          <Typography>Loading collections</Typography>
+        <Stack direction="row" spacing={1.5} role="status" sx={{ alignItems: "center", py: 4, justifyContent: "center" }}>
+          <CircularProgress size={24} />
+          <Typography color="text.secondary">Fetching collections...</Typography>
         </Stack>
       ) : null}
 
+      {/* Error state */}
       {state.type === "error" ? <Alert severity="error">{state.message}</Alert> : null}
 
+      {/* Empty state */}
       {state.type === "ready" && state.collections.length === 0 ? (
-        <Alert severity="info">No collections found.</Alert>
-      ) : null}
-
-      {state.type === "ready" && state.collections.length > 0 ? (
-        <Stack spacing={1.5}>
-          {state.collections.map((collection) => (
-            <Stack
-              key={collection.id}
-              direction="row"
-              sx={{
-                alignItems: "center",
-                justifyContent: "space-between",
-                border: "1px solid",
-                borderColor: "divider",
-                borderRadius: 1,
-                bgcolor: "background.paper",
-                px: 2,
-                py: 1.5
-              }}
-            >
-              <Box>
-                <Typography sx={{ fontWeight: 600 }}>{collection.name}</Typography>
-                <Typography variant="body2" color="text.secondary">
-                  Updated {new Date(collection.updatedAt).toLocaleString()}
-                </Typography>
-              </Box>
-              <Stack direction="row" spacing={0.5}>
-                <IconButton aria-label={`Edit ${collection.name}`} onClick={() => startEdit(collection)}>
-                  <Pencil size={18} />
-                </IconButton>
-                <Button size="small" onClick={() => void startShare(collection)}>
-                  Share
-                </Button>
-                <IconButton aria-label={`Delete ${collection.name}`} onClick={() => startDelete(collection)}>
-                  <Trash2 size={18} />
-                </IconButton>
-              </Stack>
-            </Stack>
-          ))}
-        </Stack>
-      ) : null}
-
-      {state.type === "ready" && state.sharedCollections.length > 0 ? (
-        <Stack spacing={1.5}>
-          <Typography variant="h6">Shared with me</Typography>
-          {state.sharedCollections.map((collection) => (
-            <Stack
-              key={collection.id}
-              direction="row"
-              sx={{
-                alignItems: "center",
-                justifyContent: "space-between",
-                border: "1px solid",
-                borderColor: "divider",
-                borderRadius: 1,
-                bgcolor: "background.paper",
-                px: 2,
-                py: 1.5
-              }}
-            >
-              <Box>
-                <Typography sx={{ fontWeight: 600 }}>{collection.name}</Typography>
-                <Typography variant="body2" color="text.secondary">
-                  Owner {collection.owner?.email ?? collection.ownerId} - read-only
-                </Typography>
-              </Box>
-            </Stack>
-          ))}
-        </Stack>
-      ) : null}
-
-      <Dialog open={deleteTarget !== null} onClose={() => setDeleteTarget(null)} fullWidth maxWidth="sm">
-        <DialogTitle>Delete collection</DialogTitle>
-        <DialogContent>
-          <Stack spacing={2} sx={{ pt: 1 }}>
-            <Typography>
-              Choose what should happen to bookmarks in {deleteTarget?.name}. Empty collections will be deleted
-              immediately with any option.
+        <Paper sx={{ p: 5, textAlign: "center", bgcolor: "#ffffff", borderRadius: 4, border: "1px dashed #cbd5e1" }}>
+          <Stack spacing={2} sx={{ alignItems: "center" }}>
+            <Box sx={{ p: 2, borderRadius: "50%", bgcolor: "#f5f3ff", color: "#7c3aed" }}>
+              <Folder size={32} />
+            </Box>
+            <Typography variant="h6" color="text.secondary">
+              No collections found
             </Typography>
+            <Typography variant="body2" color="text.secondary" sx={{ maxWidth: 360 }}>
+              {filter ? "Try clearing your search query." : "Organize your bookmarks into custom folders."}
+            </Typography>
+            {!showCreate ? (
+              <Button variant="contained" size="small" startIcon={<Plus size={16} />} onClick={() => setShowCreate(true)}>
+                Create First Collection
+              </Button>
+            ) : null}
+          </Stack>
+        </Paper>
+      ) : null}
+
+      {/* Collections Grid */}
+      {state.type === "ready" && state.collections.length > 0 ? (
+        <Grid container spacing={2}>
+          {state.collections.map((collection) => (
+            <Grid key={collection.id} size={{ xs: 12, md: 6 }}>
+              <Card
+                sx={{
+                  height: "100%",
+                  display: "flex",
+                  flexDirection: "column",
+                  justifyContent: "space-between",
+                  "&:hover": {
+                    borderColor: "#7c3aed"
+                  }
+                }}
+              >
+                <CardContent sx={{ p: 2.5 }}>
+                  <Stack spacing={1.5}>
+                    <Stack direction="row" sx={{ justifyContent: "space-between", alignItems: "center" }}>
+                      <Stack direction="row" spacing={1.5} sx={{ alignItems: "center" }}>
+                        <Box
+                          sx={{
+                            width: 36,
+                            height: 36,
+                            borderRadius: "10px",
+                            bgcolor: "#f5f3ff",
+                            color: "#7c3aed",
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center"
+                          }}
+                        >
+                          <Folder size={20} />
+                        </Box>
+                        <Typography variant="h6" sx={{ fontSize: "1.1rem", fontWeight: 700 }}>
+                          {collection.name}
+                        </Typography>
+                      </Stack>
+                    </Stack>
+
+                    <Stack direction="row" spacing={1} sx={{ alignItems: "center", fontSize: "0.8rem" }} color="text.secondary">
+                      <Clock size={14} />
+                      <Typography variant="caption" color="text.secondary">
+                        Updated {new Date(collection.updatedAt).toLocaleDateString()}
+                      </Typography>
+                    </Stack>
+                  </Stack>
+                </CardContent>
+
+                <Box sx={{ px: 2.5, pb: 2, pt: 0, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                  <Button
+                    size="small"
+                    variant="outlined"
+                    startIcon={<Share2 size={14} />}
+                    onClick={() => void startShare(collection)}
+                    sx={{ borderRadius: "8px" }}
+                  >
+                    Share Access
+                  </Button>
+
+                  <Stack direction="row" spacing={0.5}>
+                    <Tooltip title="Edit name">
+                      <IconButton size="small" aria-label={`Edit ${collection.name}`} onClick={() => startEdit(collection)}>
+                        <Pencil size={16} color="#64748b" />
+                      </IconButton>
+                    </Tooltip>
+                    <Tooltip title="Delete collection">
+                      <IconButton size="small" aria-label={`Delete ${collection.name}`} onClick={() => startDelete(collection)}>
+                        <Trash2 size={16} color="#ef4444" />
+                      </IconButton>
+                    </Tooltip>
+                  </Stack>
+                </Box>
+              </Card>
+            </Grid>
+          ))}
+        </Grid>
+      ) : null}
+
+      {/* Shared Collections Section */}
+      {state.type === "ready" && state.sharedCollections.length > 0 ? (
+        <Stack spacing={2} sx={{ pt: 2 }}>
+          <Stack direction="row" spacing={1} sx={{ alignItems: "center" }}>
+            <Users size={20} color="#4f46e5" />
+            <Typography variant="h6" sx={{ fontWeight: 700 }}>
+              Shared With Me
+            </Typography>
+            <Chip size="small" label={`${state.sharedCollections.length}`} sx={{ bgcolor: "#e0e7ff", color: "#4338ca", fontWeight: 700 }} />
+          </Stack>
+
+          <Grid container spacing={2}>
+            {state.sharedCollections.map((collection) => (
+              <Grid key={collection.id} size={{ xs: 12, md: 6 }}>
+                <Card sx={{ bgcolor: "#f8fafc", borderColor: "#cbd5e1" }}>
+                  <CardContent sx={{ p: 2.5 }}>
+                    <Stack spacing={1.5}>
+                      <Stack direction="row" sx={{ justifyContent: "space-between", alignItems: "center" }}>
+                        <Stack direction="row" spacing={1.5} sx={{ alignItems: "center" }}>
+                          <Box
+                            sx={{
+                              width: 36,
+                              height: 36,
+                              borderRadius: "10px",
+                              bgcolor: "#e0e7ff",
+                              color: "#4338ca",
+                              display: "flex",
+                              alignItems: "center",
+                              justifyContent: "center"
+                            }}
+                          >
+                            <Folder size={20} />
+                          </Box>
+                          <Typography variant="h6" sx={{ fontSize: "1.05rem", fontWeight: 700 }}>
+                            {collection.name}
+                          </Typography>
+                        </Stack>
+                        <Chip label="Read-Only" size="small" color="default" sx={{ fontSize: "0.7rem", fontWeight: 600 }} />
+                      </Stack>
+
+                      <Stack direction="row" spacing={1} sx={{ alignItems: "center" }} color="text.secondary">
+                        <UserCheck size={14} />
+                        <Typography variant="caption" color="text.secondary">
+                          Owner: {collection.owner?.email ?? collection.ownerId}
+                        </Typography>
+                      </Stack>
+                    </Stack>
+                  </CardContent>
+                </Card>
+              </Grid>
+            ))}
+          </Grid>
+        </Stack>
+      ) : null}
+
+      {/* Delete Dialog */}
+      <Dialog open={deleteTarget !== null} onClose={() => setDeleteTarget(null)} fullWidth maxWidth="sm">
+        <DialogTitle sx={{ fontWeight: 700 }}>Delete Collection</DialogTitle>
+        <DialogContent>
+          <Stack spacing={2.5} sx={{ pt: 1 }}>
+            <Typography variant="body2" color="text.secondary">
+              Choose what should happen to bookmarks inside <strong>{deleteTarget?.name}</strong>:
+            </Typography>
+
             <TextField
               select
-              label="Bookmark action"
+              fullWidth
+              label="Bookmark Action"
               value={deleteMode}
               onChange={(event) => {
                 setDeleteMode(event.target.value as "uncategorize" | "move" | "delete");
@@ -330,14 +491,16 @@ export function CollectionsPage() {
               }}
               size="small"
             >
-              <MenuItem value="uncategorize">Make bookmarks uncategorized</MenuItem>
+              <MenuItem value="uncategorize">Keep bookmarks (Set to Uncategorized)</MenuItem>
               <MenuItem value="move">Move bookmarks to another collection</MenuItem>
-              <MenuItem value="delete">Delete bookmarks too</MenuItem>
+              <MenuItem value="delete">Delete collection and all bookmarks inside</MenuItem>
             </TextField>
+
             {deleteMode === "move" ? (
               <TextField
                 select
-                label="Move to"
+                fullWidth
+                label="Target Collection"
                 value={moveTargetId}
                 onChange={(event) => setMoveTargetId(event.target.value)}
                 size="small"
@@ -353,77 +516,109 @@ export function CollectionsPage() {
                   : null}
               </TextField>
             ) : null}
+
             {deleteMode === "delete" ? (
-              <Alert severity="warning">Bookmarks in this collection will be permanently deleted.</Alert>
+              <Alert severity="warning">Bookmarks inside this collection will be permanently deleted!</Alert>
             ) : null}
+
             {deleteError ? <Alert severity="error">{deleteError}</Alert> : null}
           </Stack>
         </DialogContent>
-        <DialogActions>
+        <DialogActions sx={{ p: 2.5, pt: 0 }}>
           <Button onClick={() => setDeleteTarget(null)}>Cancel</Button>
           <Button color={deleteMode === "delete" ? "error" : "primary"} variant="contained" onClick={() => void confirmDelete()}>
-            Delete collection
+            Confirm Delete
           </Button>
         </DialogActions>
       </Dialog>
 
+      {/* Share Dialog */}
       <Dialog open={shareTarget !== null} onClose={() => setShareTarget(null)} fullWidth maxWidth="sm">
-        <DialogTitle>Share collection</DialogTitle>
+        <DialogTitle sx={{ fontWeight: 700 }}>Share Collection "{shareTarget?.name}"</DialogTitle>
         <DialogContent>
-          <Stack spacing={2} sx={{ pt: 1 }}>
-            <Typography>{shareTarget?.name}</Typography>
-            <Stack direction={{ xs: "column", sm: "row" }} spacing={1.5}>
-              <TextField
-                label="Recipient email"
-                value={shareEmail}
-                onChange={(event) => {
-                  setShareEmail(event.target.value);
-                  setShareError(null);
-                }}
-                size="small"
-                sx={{ flex: 1 }}
-              />
-              <TextField
-                select
-                label="Role"
-                value={sharePermission}
-                onChange={(event) => setSharePermission(event.target.value as SharePermission)}
-                size="small"
-                sx={{ minWidth: 140 }}
-              >
-                <MenuItem value="read">Read</MenuItem>
-                <MenuItem value="edit">Edit</MenuItem>
-              </TextField>
-              <Button variant="contained" onClick={() => void submitShare()}>
-                Share
-              </Button>
-            </Stack>
-            <Typography variant="body2" color="text.secondary">
-              Edit is reserved for the future role workflow; shared users are read-only in this build.
-            </Typography>
-            {shares.length > 0 ? (
-              <Stack spacing={1}>
-                {shares.map((share) => (
-                  <Stack key={share.id} direction="row" sx={{ alignItems: "center", justifyContent: "space-between" }}>
-                    <Typography>
-                      {share.sharedWithUser.email} - {share.permission}
-                    </Typography>
-                    <Button size="small" color="error" onClick={() => void revokeShare(share)}>
-                      Revoke
-                    </Button>
-                  </Stack>
-                ))}
+          <Stack spacing={3} sx={{ pt: 1 }}>
+            <Box component="form" onSubmit={(e) => { e.preventDefault(); void submitShare(); }}>
+              <Stack direction={{ xs: "column", sm: "row" }} spacing={1.5}>
+                <TextField
+                  fullWidth
+                  label="Recipient Email"
+                  placeholder="peer@example.com"
+                  value={shareEmail}
+                  onChange={(event) => {
+                    setShareEmail(event.target.value);
+                    setShareError(null);
+                  }}
+                  size="small"
+                  slotProps={{
+                    input: {
+                      startAdornment: (
+                        <InputAdornment position="start">
+                          <Mail size={16} color="#64748b" />
+                        </InputAdornment>
+                      )
+                    }
+                  }}
+                />
+                <TextField
+                  select
+                  label="Role"
+                  value={sharePermission}
+                  onChange={(event) => setSharePermission(event.target.value as SharePermission)}
+                  size="small"
+                  sx={{ minWidth: 120 }}
+                >
+                  <MenuItem value="read">Read</MenuItem>
+                  <MenuItem value="edit">Edit</MenuItem>
+                </TextField>
+                <Button variant="contained" type="submit" sx={{ minWidth: 100 }}>
+                  Share
+                </Button>
               </Stack>
-            ) : (
-              <Alert severity="info">No active shares.</Alert>
-            )}
+            </Box>
+
             {shareError ? <Alert severity="error">{shareError}</Alert> : null}
+
+            <Box>
+              <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 700 }}>
+                Active Members / Shares
+              </Typography>
+
+              {shares.length > 0 ? (
+                <Stack spacing={1}>
+                  {shares.map((share) => (
+                    <Paper key={share.id} variant="outlined" sx={{ p: 1.5, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                      <Stack direction="row" spacing={1.5} sx={{ alignItems: "center" }}>
+                        <Box sx={{ p: 1, borderRadius: "50%", bgcolor: "#f1f5f9" }}>
+                          <Mail size={16} color="#64748b" />
+                        </Box>
+                        <Box>
+                          <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                            {share.sharedWithUser.email}
+                          </Typography>
+                          <Typography variant="caption" color="text.secondary">
+                            Permission: {share.permission}
+                          </Typography>
+                        </Box>
+                      </Stack>
+                      <Button size="small" color="error" onClick={() => void revokeShare(share)}>
+                        Revoke Access
+                      </Button>
+                    </Paper>
+                  ))}
+                </Stack>
+              ) : (
+                <Alert severity="info" sx={{ bgcolor: "#f8fafc" }}>
+                  No active shares for this collection.
+                </Alert>
+              )}
+            </Box>
           </Stack>
         </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setShareTarget(null)}>Close</Button>
+        <DialogActions sx={{ p: 2.5, pt: 0 }}>
+          <Button onClick={() => setShareTarget(null)}>Done</Button>
         </DialogActions>
       </Dialog>
     </Stack>
   );
 }
+
