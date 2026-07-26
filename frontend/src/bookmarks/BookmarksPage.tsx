@@ -43,6 +43,9 @@ export function BookmarksPage() {
   const [editing, setEditing] = useState<Bookmark | null>(null);
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [showForm, setShowForm] = useState(false);
+  const [actionError, setActionError] = useState<string | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
   async function loadData(nextCollectionId = filterCollectionId, nextSearch = search) {
     if (!isAuthenticated) {
@@ -86,16 +89,25 @@ export function BookmarksPage() {
       return;
     }
 
-    if (editing) {
-      await updateBookmark(getAccessTokenSilently, editing.id, input);
-      setEditing(null);
-    } else {
-      await createBookmark(getAccessTokenSilently, input);
-    }
+    setActionError(null);
+    setIsSaving(true);
 
-    setForm(emptyForm);
-    setShowForm(false);
-    await loadData();
+    try {
+      if (editing) {
+        await updateBookmark(getAccessTokenSilently, editing.id, input);
+        setEditing(null);
+      } else {
+        await createBookmark(getAccessTokenSilently, input);
+      }
+
+      setForm(emptyForm);
+      setShowForm(false);
+      await loadData();
+    } catch (error) {
+      setActionError(error instanceof Error ? error.message : "Unable to save bookmark");
+    } finally {
+      setIsSaving(false);
+    }
   }
 
   function startEdit(bookmark: Bookmark) {
@@ -110,9 +122,29 @@ export function BookmarksPage() {
   }
 
   function copyToClipboard(bookmark: Bookmark) {
-    void navigator.clipboard.writeText(bookmark.url);
-    setCopiedId(bookmark.id);
-    setTimeout(() => setCopiedId(null), 2000);
+    navigator.clipboard
+      .writeText(bookmark.url)
+      .then(() => {
+        setCopiedId(bookmark.id);
+        setTimeout(() => setCopiedId(null), 2000);
+      })
+      .catch(() => {
+        setActionError("Unable to copy link to clipboard");
+      });
+  }
+
+  async function removeBookmark(bookmark: Bookmark) {
+    setActionError(null);
+    setDeletingId(bookmark.id);
+
+    try {
+      await deleteBookmark(getAccessTokenSilently, bookmark.id);
+      await loadData();
+    } catch (error) {
+      setActionError(error instanceof Error ? error.message : "Unable to delete bookmark");
+    } finally {
+      setDeletingId(null);
+    }
   }
 
   function getDomain(urlStr: string) {
@@ -281,7 +313,7 @@ export function BookmarksPage() {
                 >
                   Cancel
                 </Button>
-                <Button type="submit" variant="contained">
+                <Button type="submit" variant="contained" disabled={isSaving}>
                   {editing ? "Save Changes" : "Save Bookmark"}
                 </Button>
               </Stack>
@@ -289,6 +321,8 @@ export function BookmarksPage() {
           </CardContent>
         </Card>
       ) : null}
+
+      {actionError ? <Alert severity="error" onClose={() => setActionError(null)}>{actionError}</Alert> : null}
 
       {/* Filter & Search Toolbar */}
       <Stack direction={{ xs: "column", sm: "row" }} spacing={2} sx={{ justifyContent: "space-between", alignItems: { sm: "center" } }}>
@@ -483,7 +517,8 @@ export function BookmarksPage() {
                         <IconButton
                           size="small"
                           aria-label={`Delete ${bookmark.title}`}
-                          onClick={() => void deleteBookmark(getAccessTokenSilently, bookmark.id).then(() => loadData())}
+                          onClick={() => void removeBookmark(bookmark)}
+                          disabled={deletingId === bookmark.id}
                         >
                           <Trash2 size={16} color="#ef4444" />
                         </IconButton>

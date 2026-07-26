@@ -34,6 +34,11 @@ export async function apiDelete<T>(path: string, getAccessToken: AccessTokenProv
   });
 }
 
+type ErrorResponseBody = {
+  message?: string | string[];
+  error?: string;
+};
+
 async function apiRequest<T>(path: string, getAccessToken: AccessTokenProvider, init: RequestInit = {}): Promise<T> {
   const token = await getAccessToken();
   const response = await fetch(`${getApiBaseUrl()}${path}`, {
@@ -46,8 +51,31 @@ async function apiRequest<T>(path: string, getAccessToken: AccessTokenProvider, 
   });
 
   if (!response.ok) {
-    throw new Error(`API request failed with ${response.status}`);
+    throw new Error(await getErrorMessage(response));
+  }
+
+  if (response.status === 204) {
+    return undefined as T;
   }
 
   return response.json() as Promise<T>;
+}
+
+async function getErrorMessage(response: Response) {
+  try {
+    const body = (await response.json()) as ErrorResponseBody;
+    const message = Array.isArray(body.message) ? body.message.join(", ") : body.message;
+
+    if (message) {
+      return message;
+    }
+
+    if (body.error) {
+      return body.error;
+    }
+  } catch {
+    // Fall back to status text below when the backend returns an empty or non-JSON body.
+  }
+
+  return response.statusText || `API request failed with ${response.status}`;
 }

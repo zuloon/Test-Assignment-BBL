@@ -48,6 +48,8 @@ export function CollectionsPage() {
   const [name, setName] = useState("");
   const [filter, setFilter] = useState("");
   const [editing, setEditing] = useState<Collection | null>(null);
+  const [formError, setFormError] = useState<string | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<Collection | null>(null);
   const [deleteMode, setDeleteMode] = useState<"uncategorize" | "move" | "delete">("uncategorize");
   const [moveTargetId, setMoveTargetId] = useState("");
@@ -57,6 +59,8 @@ export function CollectionsPage() {
   const [sharePermission, setSharePermission] = useState<SharePermission>("read");
   const [shares, setShares] = useState<CollectionShare[]>([]);
   const [shareError, setShareError] = useState<string | null>(null);
+  const [isLoadingShares, setIsLoadingShares] = useState(false);
+  const [revokingShareId, setRevokingShareId] = useState<string | null>(null);
   const [showCreate, setShowCreate] = useState(false);
 
   async function loadCollections(nextFilter = filter) {
@@ -97,16 +101,25 @@ export function CollectionsPage() {
       return;
     }
 
-    if (editing) {
-      await updateCollection(getAccessTokenSilently, editing.id, trimmed);
-      setEditing(null);
-    } else {
-      await createCollection(getAccessTokenSilently, trimmed);
-    }
+    setFormError(null);
+    setIsSaving(true);
 
-    setName("");
-    setShowCreate(false);
-    await loadCollections();
+    try {
+      if (editing) {
+        await updateCollection(getAccessTokenSilently, editing.id, trimmed);
+        setEditing(null);
+      } else {
+        await createCollection(getAccessTokenSilently, trimmed);
+      }
+
+      setName("");
+      setShowCreate(false);
+      await loadCollections();
+    } catch (error) {
+      setFormError(error instanceof Error ? error.message : "Unable to save collection");
+    } finally {
+      setIsSaving(false);
+    }
   }
 
   async function removeCollection(collection: Collection, action?: DeleteCollectionAction) {
@@ -117,6 +130,7 @@ export function CollectionsPage() {
   function startEdit(collection: Collection) {
     setEditing(collection);
     setName(collection.name);
+    setFormError(null);
     setShowCreate(true);
   }
 
@@ -155,7 +169,16 @@ export function CollectionsPage() {
     setShareEmail("");
     setSharePermission("read");
     setShareError(null);
-    setShares(await fetchCollectionShares(getAccessTokenSilently, collection.id));
+    setShares([]);
+    setIsLoadingShares(true);
+
+    try {
+      setShares(await fetchCollectionShares(getAccessTokenSilently, collection.id));
+    } catch (error) {
+      setShareError(error instanceof Error ? error.message : "Unable to load collection shares");
+    } finally {
+      setIsLoadingShares(false);
+    }
   }
 
   async function submitShare() {
@@ -178,8 +201,17 @@ export function CollectionsPage() {
       return;
     }
 
-    await revokeCollectionShare(getAccessTokenSilently, shareTarget.id, share.id);
-    setShares(await fetchCollectionShares(getAccessTokenSilently, shareTarget.id));
+    setShareError(null);
+    setRevokingShareId(share.id);
+
+    try {
+      await revokeCollectionShare(getAccessTokenSilently, shareTarget.id, share.id);
+      setShares(await fetchCollectionShares(getAccessTokenSilently, shareTarget.id));
+    } catch (error) {
+      setShareError(error instanceof Error ? error.message : "Unable to revoke collection access");
+    } finally {
+      setRevokingShareId(null);
+    }
   }
 
   if (!isAuthenticated) {
@@ -256,7 +288,7 @@ export function CollectionsPage() {
                   }
                 }}
               />
-              <Button type="submit" variant="contained" sx={{ minWidth: 120 }}>
+              <Button type="submit" variant="contained" disabled={isSaving} sx={{ minWidth: 120 }}>
                 {editing ? "Save" : "Create"}
               </Button>
               {editing ? (
@@ -272,6 +304,7 @@ export function CollectionsPage() {
                 </Button>
               ) : null}
             </Stack>
+            {formError ? <Alert severity="error" onClose={() => setFormError(null)} sx={{ mt: 2 }}>{formError}</Alert> : null}
           </CardContent>
         </Card>
       ) : null}
@@ -583,7 +616,14 @@ export function CollectionsPage() {
                 Active Members / Shares
               </Typography>
 
-              {shares.length > 0 ? (
+              {isLoadingShares ? (
+                <Stack direction="row" spacing={1.5} role="status" sx={{ alignItems: "center", py: 1 }}>
+                  <CircularProgress size={20} />
+                  <Typography variant="body2" color="text.secondary">
+                    Loading shares...
+                  </Typography>
+                </Stack>
+              ) : shares.length > 0 ? (
                 <Stack spacing={1}>
                   {shares.map((share) => (
                     <Paper key={share.id} variant="outlined" sx={{ p: 1.5, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
@@ -600,7 +640,7 @@ export function CollectionsPage() {
                           </Typography>
                         </Box>
                       </Stack>
-                      <Button size="small" color="error" onClick={() => void revokeShare(share)}>
+                      <Button size="small" color="error" onClick={() => void revokeShare(share)} disabled={revokingShareId === share.id}>
                         Revoke Access
                       </Button>
                     </Paper>

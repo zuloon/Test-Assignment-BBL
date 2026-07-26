@@ -4,6 +4,7 @@ import { AllPage } from "./all/AllPage";
 import { AppAuthProvider } from "./auth/AuthProvider";
 import { BookmarksPage } from "./bookmarks/BookmarksPage";
 import { CollectionsPage } from "./collections/CollectionsPage";
+import { AppErrorBoundary } from "./shared/errors/AppErrorBoundary";
 import { AppLayout } from "./shared/layout/AppLayout";
 
 const theme = createTheme({
@@ -140,28 +141,30 @@ export function App() {
   return (
     <ThemeProvider theme={theme}>
       <CssBaseline />
-      <AppAuthProvider>
-        <BrowserRouter>
-          <AppLayout
-            navItems={[
-              { label: "All Vault", to: "/" },
-              { label: "Collections", to: "/collections" },
-              { label: "Bookmarks", to: "/bookmarks" }
-            ]}
-          >
-            <Routes>
-              <Route path="/" element={<AllPage />} />
-              <Route path="/callback" element={<AllPage />} />
-              <Route path="/me" element={<Navigate to="/" replace />} />
-              <Route path="/status" element={<Navigate to="/" replace />} />
-              <Route path="/collections" element={<CollectionsPage />} />
-              <Route path="/bookmarks" element={<BookmarksPage />} />
-              <Route path="/all" element={<AllPage />} />
-              <Route path="*" element={<Navigate to="/" replace />} />
-            </Routes>
-          </AppLayout>
-        </BrowserRouter>
-      </AppAuthProvider>
+      <AppErrorBoundary>
+        <AppAuthProvider>
+          <BrowserRouter>
+            <AppLayout
+              navItems={[
+                { label: "All Vault", to: "/" },
+                { label: "Collections", to: "/collections" },
+                { label: "Bookmarks", to: "/bookmarks" }
+              ]}
+            >
+              <Routes>
+                <Route path="/" element={<AllPage />} />
+                <Route path="/callback" element={<AllPage />} />
+                <Route path="/me" element={<Navigate to="/" replace />} />
+                <Route path="/status" element={<Navigate to="/" replace />} />
+                <Route path="/collections" element={<CollectionsPage />} />
+                <Route path="/bookmarks" element={<BookmarksPage />} />
+                <Route path="/all" element={<AllPage />} />
+                <Route path="*" element={<Navigate to="/" replace />} />
+              </Routes>
+            </AppLayout>
+          </BrowserRouter>
+        </AppAuthProvider>
+      </AppErrorBoundary>
     </ThemeProvider>
   );
 }
