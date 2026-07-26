@@ -10,3 +10,6 @@ backend/prisma/test*.db
 backend/prisma/test*.db-journal
 *.tsbuildinfo
 .vite/
+frontend/.auth/
+frontend/test-results/
+frontend/playwright-report/

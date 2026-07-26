@@ -44,7 +44,7 @@ transcripts/  Session notes and prompt history
 - Node.js `>=22.22.0` recommended by the repo.
 - Backend: NestJS, TypeScript, Prisma, SQLite for local development.
 - Frontend: React 19, Vite 8, React Router 8, MUI 9, Auth0 React SDK.
-- Tests: Vitest and Supertest for backend e2e coverage.
+- Tests: Vitest and Supertest for backend e2e coverage; Playwright for real-browser frontend E2E flows.
 
 ## Install
 
@@ -97,6 +97,30 @@ Run backend tests from the root:
 npm test
 ```
 
+Run frontend Playwright E2E tests against the real Auth0 tenant:
+
+```powershell
+$env:E2E_AUTH_EMAIL="candidate@test.com"
+$env:E2E_AUTH_PASSWORD="<password from the PDF brief>"
+npm run test:e2e
+```
+
+The E2E suite logs in through Auth0 once, stores temporary browser state under `frontend/.auth/user.json`, and then runs action tests for:
+
+- signed-in app shell,
+- collection create/update/delete,
+- bookmark create/update/search/delete,
+- collection error states,
+- All Vault grouped read view.
+
+For a headed browser run:
+
+```powershell
+$env:E2E_AUTH_EMAIL="candidate@test.com"
+$env:E2E_AUTH_PASSWORD="<password from the PDF brief>"
+npm run test:e2e --workspace frontend -- --headed
+```
+
 Build both workspaces:
 
 ```bash
@@ -109,7 +133,7 @@ Frontend build can also be run directly:
 npm run build --workspace frontend
 ```
 
-Note: the frontend has a Vitest script but no frontend test files yet. Current frontend verification is TypeScript/Vite build plus manual browser QA.
+Note: component-level frontend Vitest tests are not included yet. Frontend verification currently uses Playwright E2E, TypeScript/Vite build, and manual browser QA screenshots.
 
 ## Docker
 
@@ -193,6 +217,8 @@ The API client also parses NestJS error bodies so users see messages such as `Us
 ## Auth And Test Users
 
 Real browser login uses the provided Auth0 tenant. The brief provides one known account: `candidate@test.com`.
+
+Playwright E2E uses that real Auth0 account through environment variables. Do not commit the password or generated `frontend/.auth/user.json` storage state.
 
 For API smoke tests and cross-user checks, run the backend in deterministic test auth mode:
 
