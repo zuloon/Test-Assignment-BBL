@@ -35,7 +35,7 @@ import {
   revokeCollectionShare,
   shareCollection,
   updateCollection
-} from "./collectionsApi";
+} from "../../api/collections";
 
 type LoadState =
   | { type: "loading" }

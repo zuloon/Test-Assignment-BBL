@@ -1,4 +1,4 @@
-import { getApiBaseUrl } from "../shared/api/config";
+import { getApiBaseUrl } from "./config";
 
 export type HealthResponse = {
   status: "ok";

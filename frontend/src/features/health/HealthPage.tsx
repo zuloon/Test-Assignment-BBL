@@ -2,7 +2,7 @@ import { Alert, Box, Button, Card, CardContent, Chip, CircularProgress, Grid, St
 import { Activity, ArrowRight, Bookmark, CheckCircle2, Folder, Lock, ShieldCheck, RefreshCw } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router";
-import { HealthResponse, fetchHealth } from "./healthApi";
+import { HealthResponse, fetchHealth } from "../../api/health";
 
 type StatusState =
   | { type: "loading" }

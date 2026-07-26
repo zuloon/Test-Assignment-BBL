@@ -17,8 +17,8 @@ import {
 } from "@mui/material";
 import { Bookmark as BookmarkIcon, Check, Copy, ExternalLink, Folder, Layers, Search, Users } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
-import { Bookmark, fetchBookmarks, fetchCollectionBookmarks } from "../bookmarks/bookmarksApi";
-import { Collection, fetchCollections } from "../collections/collectionsApi";
+import { Bookmark, fetchBookmarks, fetchCollectionBookmarks } from "../../api/bookmarks";
+import { Collection, fetchCollections } from "../../api/collections";
 
 type CollectionWithBookmarks = Collection & {
   bookmarks: Bookmark[];

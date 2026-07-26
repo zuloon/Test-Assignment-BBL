@@ -2,7 +2,7 @@ import { useAuth0 } from "@auth0/auth0-react";
 import { Alert, Avatar, Box, Button, Card, CardContent, Chip, CircularProgress, Paper, Stack, Typography } from "@mui/material";
 import { KeyRound, LogOut, ShieldCheck, User } from "lucide-react";
 import { useEffect, useState } from "react";
-import { CurrentUserResponse, fetchCurrentUser } from "./meApi";
+import { CurrentUserResponse, fetchCurrentUser } from "../../api/me";
 
 type UserState =
   | { type: "idle" }

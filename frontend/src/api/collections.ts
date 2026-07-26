@@ -1,4 +1,4 @@
-import { AccessTokenProvider, apiDelete, apiGet, apiPost, apiPut } from "../shared/api/apiClient";
+import { AccessTokenProvider, apiDelete, apiGet, apiPost, apiPut } from "./apiClient";
 
 export type Collection = {
   id: string;

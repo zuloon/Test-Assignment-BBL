@@ -19,8 +19,8 @@ import {
 } from "@mui/material";
 import { Bookmark as BookmarkIcon, Check, Copy, ExternalLink, FileText, Folder, Globe, Pencil, Plus, Search, Tag, Trash2, X } from "lucide-react";
 import { FormEvent, useEffect, useState } from "react";
-import { Collection, fetchCollections } from "../collections/collectionsApi";
-import { Bookmark, BookmarkInput, createBookmark, deleteBookmark, fetchBookmarks, updateBookmark } from "./bookmarksApi";
+import { Collection, fetchCollections } from "../../api/collections";
+import { Bookmark, BookmarkInput, createBookmark, deleteBookmark, fetchBookmarks, updateBookmark } from "../../api/bookmarks";
 
 type LoadState =
   | { type: "loading" }

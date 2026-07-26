@@ -1,5 +1,5 @@
-import { AccessTokenProvider, apiDelete, apiGet, apiPost, apiPut } from "../shared/api/apiClient";
-import { Collection } from "../collections/collectionsApi";
+import { AccessTokenProvider, apiDelete, apiGet, apiPost, apiPut } from "./apiClient";
+import { Collection } from "./collections";
 
 export type Bookmark = {
   id: string;

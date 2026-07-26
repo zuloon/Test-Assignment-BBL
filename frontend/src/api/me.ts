@@ -1,4 +1,4 @@
-import { AccessTokenProvider, apiGet } from "../shared/api/apiClient";
+import { AccessTokenProvider, apiGet } from "./apiClient";
 
 export type CurrentUserResponse = {
   id: string;
