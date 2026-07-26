@@ -24,7 +24,7 @@ The central invariant is privacy:
 
 - Monorepo with `/backend` and `/frontend`.
 - Backend: Node.js, TypeScript, NestJS, Prisma, SQL persistence.
-- Frontend: React, Vite, TypeScript, React Router v8 or newer, MUI v9 or newer.
+- Frontend: React, Vite, TypeScript, React Router v8 or newer, MUI v9 or newer, with reusable components/hooks/utils for common page states and browser helpers.
 - Authentication: Auth0 OIDC Authorization Code flow with PKCE using S256.
 
 ## Auth Decisions
@@ -164,11 +164,14 @@ Priority tests:
 - Shared users can read shared collections and bookmarks.
 - Shared users cannot mutate shared collections or bookmarks.
 - Token validation rejects missing, expired, wrong-issuer, wrong-audience, and wrong-algorithm credentials where feasible.
+- Frontend Playwright E2E must pass before Cloudflare Pages deployment.
+- Backend Docker image validation must pass before Render deployment.
 
 Test strategy:
 
 - Runtime app path validates real Auth0 JWTs using discovery and JWKS.
 - Tests may use deterministic mocked JWT claims for owner-boundary and data-access behavior.
+- GitHub Actions uses platform secrets for deploy tokens and E2E Auth0 credentials; these values are not committed.
 
 ## Submission Evidence
 

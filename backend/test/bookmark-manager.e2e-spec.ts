@@ -268,6 +268,222 @@ describe("bookmark manager API", () => {
     expect(updatedBookmark.body.collectionId).toBeNull();
   });
 
+  it("deletes an empty collection without requiring a bookmark action", async () => {
+    const collection = await request(app.getHttpServer())
+      .post("/collections")
+      .set("Authorization", auth(userA))
+      .send({ name: "Empty collection" })
+      .expect(201);
+
+    await request(app.getHttpServer())
+      .delete(`/collections/${collection.body.id}`)
+      .set("Authorization", auth(userA))
+      .expect(200)
+      .expect({ deleted: true });
+
+    await request(app.getHttpServer())
+      .get(`/collections/${collection.body.id}`)
+      .set("Authorization", auth(userA))
+      .expect(404);
+  });
+
+  it("moves bookmarks when deleting a collection with the move action", async () => {
+    const source = await request(app.getHttpServer())
+      .post("/collections")
+      .set("Authorization", auth(userA))
+      .send({ name: "Move source" })
+      .expect(201);
+
+    const target = await request(app.getHttpServer())
+      .post("/collections")
+      .set("Authorization", auth(userA))
+      .send({ name: "Move target" })
+      .expect(201);
+
+    const bookmark = await request(app.getHttpServer())
+      .post("/bookmarks")
+      .set("Authorization", auth(userA))
+      .send({ url: "https://example.com/move", title: "Move me", collectionId: source.body.id })
+      .expect(201);
+
+    await request(app.getHttpServer())
+      .delete(`/collections/${source.body.id}`)
+      .set("Authorization", auth(userA))
+      .send({ bookmarkAction: "move", targetCollectionId: target.body.id })
+      .expect(200)
+      .expect({ deleted: true });
+
+    const movedBookmark = await request(app.getHttpServer())
+      .get(`/bookmarks/${bookmark.body.id}`)
+      .set("Authorization", auth(userA))
+      .expect(200);
+
+    expect(movedBookmark.body.collectionId).toBe(target.body.id);
+
+    await request(app.getHttpServer())
+      .get(`/collections/${source.body.id}`)
+      .set("Authorization", auth(userA))
+      .expect(404);
+  });
+
+  it("rejects invalid move targets when deleting a collection", async () => {
+    const source = await request(app.getHttpServer())
+      .post("/collections")
+      .set("Authorization", auth(userA))
+      .send({ name: "Invalid move source" })
+      .expect(201);
+
+    await request(app.getHttpServer())
+      .post("/bookmarks")
+      .set("Authorization", auth(userA))
+      .send({ url: "https://example.com/invalid-move", title: "Invalid move", collectionId: source.body.id })
+      .expect(201);
+
+    await request(app.getHttpServer())
+      .delete(`/collections/${source.body.id}`)
+      .set("Authorization", auth(userA))
+      .send({ bookmarkAction: "move" })
+      .expect(404);
+
+    await request(app.getHttpServer())
+      .delete(`/collections/${source.body.id}`)
+      .set("Authorization", auth(userA))
+      .send({ bookmarkAction: "move", targetCollectionId: source.body.id })
+      .expect(404);
+
+    const otherOwnerTarget = await request(app.getHttpServer())
+      .post("/collections")
+      .set("Authorization", auth(userB))
+      .send({ name: "Other owner target" })
+      .expect(201);
+
+    await request(app.getHttpServer())
+      .delete(`/collections/${source.body.id}`)
+      .set("Authorization", auth(userA))
+      .send({ bookmarkAction: "move", targetCollectionId: otherOwnerTarget.body.id })
+      .expect(404);
+
+    await request(app.getHttpServer())
+      .get(`/collections/${source.body.id}`)
+      .set("Authorization", auth(userA))
+      .expect(200);
+  });
+
+  it("deletes contained bookmarks when deleting a collection with the delete action", async () => {
+    const collection = await request(app.getHttpServer())
+      .post("/collections")
+      .set("Authorization", auth(userA))
+      .send({ name: "Delete with bookmarks" })
+      .expect(201);
+
+    const bookmark = await request(app.getHttpServer())
+      .post("/bookmarks")
+      .set("Authorization", auth(userA))
+      .send({ url: "https://example.com/delete", title: "Delete me", collectionId: collection.body.id })
+      .expect(201);
+
+    await request(app.getHttpServer())
+      .delete(`/collections/${collection.body.id}`)
+      .set("Authorization", auth(userA))
+      .send({ bookmarkAction: "delete" })
+      .expect(200)
+      .expect({ deleted: true });
+
+    await request(app.getHttpServer())
+      .get(`/bookmarks/${bookmark.body.id}`)
+      .set("Authorization", auth(userA))
+      .expect(404);
+
+    await request(app.getHttpServer())
+      .get(`/collections/${collection.body.id}`)
+      .set("Authorization", auth(userA))
+      .expect(404);
+  });
+
+  it("does not let a shared reader delete the owner collection", async () => {
+    const collection = await request(app.getHttpServer())
+      .post("/collections")
+      .set("Authorization", auth(userA))
+      .send({ name: "Shared delete denied" })
+      .expect(201);
+
+    await request(app.getHttpServer())
+      .post(`/collections/${collection.body.id}/shares`)
+      .set("Authorization", auth(userA))
+      .send({ email: "other-user@test.com", permission: "read" })
+      .expect(201);
+
+    await request(app.getHttpServer())
+      .delete(`/collections/${collection.body.id}`)
+      .set("Authorization", auth(userB))
+      .send({ bookmarkAction: "delete" })
+      .expect(404);
+
+    await request(app.getHttpServer())
+      .get(`/collections/${collection.body.id}`)
+      .set("Authorization", auth(userA))
+      .expect(200);
+  });
+  it("validates share recipients and keeps share management owner-scoped", async () => {
+    const collection = await request(app.getHttpServer())
+      .post("/collections")
+      .set("Authorization", auth(userA))
+      .send({ name: "Share validation" })
+      .expect(201);
+
+    await request(app.getHttpServer())
+      .post(`/collections/${collection.body.id}/shares`)
+      .set("Authorization", auth(userA))
+      .send({ email: "missing-user@test.com" })
+      .expect(404);
+
+    await request(app.getHttpServer())
+      .post(`/collections/${collection.body.id}/shares`)
+      .set("Authorization", auth(userA))
+      .send({ email: "candidate@test.com" })
+      .expect(404);
+
+    const readShare = await request(app.getHttpServer())
+      .post(`/collections/${collection.body.id}/shares`)
+      .set("Authorization", auth(userA))
+      .send({ email: "OTHER-USER@test.com", permission: "read" })
+      .expect(201);
+
+    expect(readShare.body.permission).toBe("read");
+    expect(readShare.body.sharedWithUser.email).toBe("other-user@test.com");
+
+    const updatedShare = await request(app.getHttpServer())
+      .post(`/collections/${collection.body.id}/shares`)
+      .set("Authorization", auth(userA))
+      .send({ email: "other-user@test.com", permission: "edit" })
+      .expect(201);
+
+    expect(updatedShare.body.id).toBe(readShare.body.id);
+    expect(updatedShare.body.permission).toBe("edit");
+
+    const shares = await request(app.getHttpServer())
+      .get(`/collections/${collection.body.id}/shares`)
+      .set("Authorization", auth(userA))
+      .expect(200);
+
+    expect(shares.body).toHaveLength(1);
+    expect(shares.body[0].id).toBe(readShare.body.id);
+
+    await request(app.getHttpServer())
+      .get(`/collections/${collection.body.id}/shares`)
+      .set("Authorization", auth(userB))
+      .expect(404);
+
+    await request(app.getHttpServer())
+      .delete(`/collections/${collection.body.id}/shares/${readShare.body.id}`)
+      .set("Authorization", auth(userB))
+      .expect(404);
+
+    await request(app.getHttpServer())
+      .get(`/collections/${collection.body.id}`)
+      .set("Authorization", auth(userB))
+      .expect(200);
+  });
   it("allows read-only sharing and revocation", async () => {
     const collection = await request(app.getHttpServer())
       .post("/collections")

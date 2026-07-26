@@ -6,21 +6,25 @@ import {
   Card,
   CardContent,
   Chip,
-  CircularProgress,
   Grid,
   IconButton,
   InputAdornment,
   MenuItem,
-  Paper,
   Stack,
   TextField,
   Tooltip,
   Typography
 } from "@mui/material";
-import { Bookmark as BookmarkIcon, Check, Copy, ExternalLink, FileText, Folder, Globe, Pencil, Plus, Search, Tag, Trash2, X } from "lucide-react";
+import { Bookmark as BookmarkIcon, Check, Copy, ExternalLink, FileText, Folder, Globe, Pencil, Plus, Tag, Trash2, X } from "lucide-react";
 import { FormEvent, useEffect, useState } from "react";
 import { Collection, fetchCollections } from "../../api/collections";
 import { Bookmark, BookmarkInput, createBookmark, deleteBookmark, fetchBookmarks, updateBookmark } from "../../api/bookmarks";
+import { AuthPrompt } from "../../components/AuthPrompt";
+import { EmptyState } from "../../components/EmptyState";
+import { LoadingState } from "../../components/LoadingState";
+import { SearchField } from "../../components/SearchField";
+import { useClipboardStatus } from "../../hooks/useClipboardStatus";
+import { getDomain, normalizeExternalUrl } from "../../utils/url";
 
 type LoadState =
   | { type: "loading" }
@@ -41,7 +45,7 @@ export function BookmarksPage() {
   const [filterCollectionId, setFilterCollectionId] = useState("");
   const [search, setSearch] = useState("");
   const [editing, setEditing] = useState<Bookmark | null>(null);
-  const [copiedId, setCopiedId] = useState<string | null>(null);
+  const { copiedId, copyToClipboard: copyLinkToClipboard } = useClipboardStatus();
   const [showForm, setShowForm] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
@@ -122,15 +126,9 @@ export function BookmarksPage() {
   }
 
   function copyToClipboard(bookmark: Bookmark) {
-    navigator.clipboard
-      .writeText(bookmark.url)
-      .then(() => {
-        setCopiedId(bookmark.id);
-        setTimeout(() => setCopiedId(null), 2000);
-      })
-      .catch(() => {
-        setActionError("Unable to copy link to clipboard");
-      });
+    void copyLinkToClipboard(bookmark.id, bookmark.url).catch(() => {
+      setActionError("Unable to copy link to clipboard");
+    });
   }
 
   async function removeBookmark(bookmark: Bookmark) {
@@ -147,31 +145,17 @@ export function BookmarksPage() {
     }
   }
 
-  function getDomain(urlStr: string) {
-    try {
-      const parsed = new URL(urlStr.startsWith("http") ? urlStr : `https://${urlStr}`);
-      return parsed.hostname;
-    } catch {
-      return urlStr;
-    }
-  }
 
   if (!isAuthenticated) {
     return (
-      <Paper sx={{ p: 4, textAlign: "center", borderRadius: 4 }}>
-        <Stack spacing={2} sx={{ alignItems: "center" }}>
-          <Box sx={{ p: 2, borderRadius: "50%", bgcolor: "#e0e7ff", color: "#4f46e5" }}>
-            <BookmarkIcon size={32} />
-          </Box>
-          <Typography variant="h5">Sign in to Access Bookmarks</Typography>
-          <Typography color="text.secondary" sx={{ maxWidth: 400 }}>
-            Your bookmarks are protected with private tenant isolation. Log in to save and manage your links.
-          </Typography>
-          <Button variant="contained" onClick={() => void loginWithRedirect()} sx={{ px: 4 }}>
-            Log in with Auth0
-          </Button>
-        </Stack>
-      </Paper>
+      <AuthPrompt
+        icon={<BookmarkIcon size={32} />}
+        title="Sign in to Access Bookmarks"
+        description="Your bookmarks are protected with private tenant isolation. Log in to save and manage your links."
+        onLogin={() => void loginWithRedirect()}
+        iconBackground="#e0e7ff"
+        iconColor="#4f46e5"
+      />
     );
   }
 
@@ -327,21 +311,11 @@ export function BookmarksPage() {
       {/* Filter & Search Toolbar */}
       <Stack direction={{ xs: "column", sm: "row" }} spacing={2} sx={{ justifyContent: "space-between", alignItems: { sm: "center" } }}>
         <Stack direction={{ xs: "column", sm: "row" }} spacing={1.5} sx={{ flex: 1 }}>
-          <TextField
+          <SearchField
             placeholder="Search bookmarks by title, URL or notes..."
             value={search}
-            onChange={(event) => setSearch(event.target.value)}
-            size="small"
+            onSearchChange={setSearch}
             sx={{ minWidth: { sm: 300 }, flex: 1 }}
-            slotProps={{
-              input: {
-                startAdornment: (
-                  <InputAdornment position="start">
-                    <Search size={16} color="#64748b" />
-                  </InputAdornment>
-                )
-              }
-            }}
           />
           <TextField
             select
@@ -372,38 +346,29 @@ export function BookmarksPage() {
       </Stack>
 
       {/* Loading state */}
-      {state.type === "loading" ? (
-        <Stack direction="row" spacing={1.5} role="status" sx={{ alignItems: "center", py: 4, justifyContent: "center" }}>
-          <CircularProgress size={24} />
-          <Typography color="text.secondary">Fetching your private bookmarks...</Typography>
-        </Stack>
-      ) : null}
+      {state.type === "loading" ? <LoadingState message="Fetching your private bookmarks..." /> : null}
 
       {/* Error state */}
       {state.type === "error" ? <Alert severity="error">{state.message}</Alert> : null}
 
       {/* Empty state */}
       {state.type === "ready" && state.bookmarks.length === 0 ? (
-        <Paper sx={{ p: 5, textAlign: "center", bgcolor: "#ffffff", borderRadius: 4, border: "1px dashed #cbd5e1" }}>
-          <Stack spacing={2} sx={{ alignItems: "center" }}>
-            <Box sx={{ p: 2, borderRadius: "50%", bgcolor: "#f1f5f9", color: "#94a3b8" }}>
-              <BookmarkIcon size={32} />
-            </Box>
-            <Typography variant="h6" color="text.secondary">
-              No bookmarks found
-            </Typography>
-            <Typography variant="body2" color="text.secondary" sx={{ maxWidth: 360 }}>
-              {search || filterCollectionId
-                ? "Try clearing your search query or collection filter."
-                : "Get started by adding your first bookmark."}
-            </Typography>
-            {!showForm ? (
+        <EmptyState
+          icon={<BookmarkIcon size={32} />}
+          title="No bookmarks found"
+          description={
+            search || filterCollectionId
+              ? "Try clearing your search query or collection filter."
+              : "Get started by adding your first bookmark."
+          }
+          action={
+            !showForm ? (
               <Button variant="contained" size="small" startIcon={<Plus size={16} />} onClick={() => setShowForm(true)}>
                 Add First Bookmark
               </Button>
-            ) : null}
-          </Stack>
-        </Paper>
+            ) : null
+          }
+        />
       ) : null}
 
       {/* Bookmarks Grid */}
@@ -498,7 +463,7 @@ export function BookmarksPage() {
                         <IconButton
                           size="small"
                           component="a"
-                          href={bookmark.url.startsWith("http") ? bookmark.url : `https://${bookmark.url}`}
+                          href={normalizeExternalUrl(bookmark.url)}
                           target="_blank"
                           rel="noopener noreferrer"
                         >

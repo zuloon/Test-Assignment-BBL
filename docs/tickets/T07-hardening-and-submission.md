@@ -28,7 +28,8 @@ Prepare the project for grading with stronger verification and complete submissi
 - Backend build passes.
 - Frontend build passes.
 - Backend e2e suite passes.
-- Frontend automated tests are intentionally out of scope for this submission.
+- Frontend Playwright E2E tests run in CI and gate Cloudflare Pages deployment.
+- Backend deploy is gated by backend Docker image validation before the Render deploy hook is triggered.
 - Any skipped checks or tool failures are documented with rationale.
 
 ## Manual Smoke Test
@@ -37,7 +38,7 @@ Prepare the project for grading with stronger verification and complete submissi
 - Run backend.
 - Run frontend.
 - Login with Auth0.
-- Exercise collections, bookmarks, delete actions, and sharing.
+- Exercise collections, bookmarks, delete actions, sharing, signed-out/loading/empty/error states, and deployment dashboards.
 
 ## Commit Message
 

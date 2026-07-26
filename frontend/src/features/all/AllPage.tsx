@@ -2,23 +2,26 @@ import { useAuth0 } from "@auth0/auth0-react";
 import {
   Alert,
   Box,
-  Button,
   Card,
   CardContent,
   Chip,
-  CircularProgress,
   IconButton,
-  InputAdornment,
   Paper,
   Stack,
   TextField,
   Tooltip,
   Typography
 } from "@mui/material";
-import { Bookmark as BookmarkIcon, Check, Copy, ExternalLink, Folder, Layers, Search, Users } from "lucide-react";
+import { Bookmark as BookmarkIcon, Check, Copy, ExternalLink, Folder, Layers, Users } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { Bookmark, fetchBookmarks, fetchCollectionBookmarks } from "../../api/bookmarks";
 import { Collection, fetchCollections } from "../../api/collections";
+import { AuthPrompt } from "../../components/AuthPrompt";
+import { EmptyState } from "../../components/EmptyState";
+import { LoadingState } from "../../components/LoadingState";
+import { SearchField } from "../../components/SearchField";
+import { useClipboardStatus } from "../../hooks/useClipboardStatus";
+import { getDomain, matchesSearch, normalizeExternalUrl } from "../../utils/url";
 
 type CollectionWithBookmarks = Collection & {
   bookmarks: Bookmark[];
@@ -30,15 +33,12 @@ type LoadState =
   | { type: "ready"; collections: CollectionWithBookmarks[]; uncategorized: Bookmark[] }
   | { type: "error"; message: string };
 
-function matchesSearch(value: string | null | undefined, search: string) {
-  return value?.toLowerCase().includes(search) ?? false;
-}
 
 export function AllPage() {
   const { getAccessTokenSilently, isAuthenticated, loginWithRedirect } = useAuth0();
   const [state, setState] = useState<LoadState>({ type: "loading" });
   const [search, setSearch] = useState("");
-  const [copiedId, setCopiedId] = useState<string | null>(null);
+  const { copiedId, copyToClipboard } = useClipboardStatus();
 
   async function loadData() {
     if (!isAuthenticated) {
@@ -127,37 +127,17 @@ export function AllPage() {
     };
   }, [search, state]);
 
-  function copyToClipboard(bookmark: Bookmark) {
-    void navigator.clipboard.writeText(bookmark.url);
-    setCopiedId(bookmark.id);
-    setTimeout(() => setCopiedId(null), 2000);
-  }
-
-  function getDomain(urlStr: string) {
-    try {
-      const parsed = new URL(urlStr.startsWith("http") ? urlStr : `https://${urlStr}`);
-      return parsed.hostname;
-    } catch {
-      return urlStr;
-    }
-  }
 
   if (!isAuthenticated) {
     return (
-      <Paper sx={{ p: 4, textAlign: "center", borderRadius: 4 }}>
-        <Stack spacing={2} sx={{ alignItems: "center" }}>
-          <Box sx={{ p: 2, borderRadius: "50%", bgcolor: "#eff6ff", color: "#2563eb" }}>
-            <Layers size={32} />
-          </Box>
-          <Typography variant="h5">Sign in to View All Vault Items</Typography>
-          <Typography color="text.secondary" sx={{ maxWidth: 400 }}>
-            Log in with Auth0 to explore all private and shared collections in your vault.
-          </Typography>
-          <Button variant="contained" onClick={() => void loginWithRedirect()} sx={{ px: 4 }}>
-            Log in with Auth0
-          </Button>
-        </Stack>
-      </Paper>
+      <AuthPrompt
+        icon={<Layers size={32} />}
+        title="Sign in to View All Vault Items"
+        description="Log in with Auth0 to explore all private and shared collections in your vault."
+        onLogin={() => void loginWithRedirect()}
+        iconBackground="#eff6ff"
+        iconColor="#2563eb"
+      />
     );
   }
 
@@ -174,49 +154,26 @@ export function AllPage() {
 
       {/* Toolbar */}
       <Stack direction={{ xs: "column", sm: "row" }} spacing={2} sx={{ justifyContent: "space-between", alignItems: { sm: "center" } }}>
-        <TextField
+        <SearchField
           placeholder="Search all titles, URLs or notes..."
           value={search}
-          onChange={(event) => setSearch(event.target.value)}
-          size="small"
+          onSearchChange={setSearch}
           sx={{ minWidth: { sm: 360 } }}
-          slotProps={{
-            input: {
-              startAdornment: (
-                <InputAdornment position="start">
-                  <Search size={16} color="#64748b" />
-                </InputAdornment>
-              )
-            }
-          }}
         />
       </Stack>
 
-      {filteredState.type === "loading" ? (
-        <Stack direction="row" spacing={1.5} role="status" sx={{ alignItems: "center", py: 4, justifyContent: "center" }}>
-          <CircularProgress size={24} />
-          <Typography color="text.secondary">Loading all bookmarks...</Typography>
-        </Stack>
-      ) : null}
+      {filteredState.type === "loading" ? <LoadingState message="Loading all bookmarks..." /> : null}
 
       {filteredState.type === "error" ? <Alert severity="error">{filteredState.message}</Alert> : null}
 
       {filteredState.type === "ready" &&
       filteredState.collections.length === 0 &&
       filteredState.uncategorized.length === 0 ? (
-        <Paper sx={{ p: 5, textAlign: "center", bgcolor: "#ffffff", borderRadius: 4, border: "1px dashed #cbd5e1" }}>
-          <Stack spacing={2} sx={{ alignItems: "center" }}>
-            <Box sx={{ p: 2, borderRadius: "50%", bgcolor: "#f1f5f9", color: "#94a3b8" }}>
-              <Layers size={32} />
-            </Box>
-            <Typography variant="h6" color="text.secondary">
-              No bookmarks in your vault
-            </Typography>
-            <Typography variant="body2" color="text.secondary">
-              {search ? "No matching bookmarks found." : "Add bookmarks or collections to see them listed here."}
-            </Typography>
-          </Stack>
-        </Paper>
+        <EmptyState
+          icon={<Layers size={32} />}
+          title="No bookmarks in your vault"
+          description={search ? "No matching bookmarks found." : "Add bookmarks or collections to see them listed here."}
+        />
       ) : null}
 
       {filteredState.type === "ready" ? (
@@ -313,7 +270,7 @@ export function AllPage() {
 
                               <Stack direction="row" spacing={0.5}>
                                 <Tooltip title={isCopied ? "Copied!" : "Copy Link"}>
-                                  <IconButton size="small" onClick={() => copyToClipboard(bookmark)}>
+                                  <IconButton size="small" onClick={() => void copyToClipboard(bookmark.id, bookmark.url)}>
                                     {isCopied ? <Check size={16} color="#10b981" /> : <Copy size={16} color="#64748b" />}
                                   </IconButton>
                                 </Tooltip>
@@ -321,7 +278,7 @@ export function AllPage() {
                                   <IconButton
                                     size="small"
                                     component="a"
-                                    href={bookmark.url.startsWith("http") ? bookmark.url : `https://${bookmark.url}`}
+                                    href={normalizeExternalUrl(bookmark.url)}
                                     target="_blank"
                                     rel="noopener noreferrer"
                                   >
@@ -429,7 +386,7 @@ export function AllPage() {
 
                             <Stack direction="row" spacing={0.5}>
                               <Tooltip title={isCopied ? "Copied!" : "Copy Link"}>
-                                <IconButton size="small" onClick={() => copyToClipboard(bookmark)}>
+                                <IconButton size="small" onClick={() => void copyToClipboard(bookmark.id, bookmark.url)}>
                                   {isCopied ? <Check size={16} color="#10b981" /> : <Copy size={16} color="#64748b" />}
                                 </IconButton>
                               </Tooltip>
@@ -437,7 +394,7 @@ export function AllPage() {
                                 <IconButton
                                   size="small"
                                   component="a"
-                                  href={bookmark.url.startsWith("http") ? bookmark.url : `https://${bookmark.url}`}
+                                  href={normalizeExternalUrl(bookmark.url)}
                                   target="_blank"
                                   rel="noopener noreferrer"
                                 >

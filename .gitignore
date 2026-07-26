@@ -3,7 +3,6 @@ dist/
 coverage/
 .env
 .env.local
-.env.example
 backend/prisma/dev.db
 backend/prisma/dev.db-journal
 backend/prisma/test*.db

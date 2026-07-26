@@ -27,3 +27,16 @@ This is a condensed transcript note from the Codex implementation session.
 - Prisma SQLite path handling failed with the wrong relative path. Fixed by using `DATABASE_URL=file:./dev.db` relative to the Prisma schema folder.
 - Prisma schema engine commands failed locally. Added a Node SQLite bootstrap script for local DB setup.
 - Prisma client generation can fail on Windows if a backend process locks the query engine DLL. Stop backend before `db:generate`.
+## Deployment And CI Updates
+
+- Frontend deploys to Cloudflare Pages through GitHub Actions `wrangler pages deploy`; Cloudflare native Git integration is not connected.
+- Backend deploys to Render through a GitHub Actions-triggered Render deploy hook; Render Auto Deploy is off.
+- `deploy_frontend` waits for `frontend_e2e`, so Playwright must pass before Cloudflare deployment.
+- `deploy_backend` waits for `backend_docker`, so Render deploy is gated by Docker build validation.
+- GitHub Actions secrets and variables are documented instead of committed.
+
+## Refactor And Test Updates
+
+- Reused frontend signed-out, loading, empty, and search UI through shared components.
+- Moved URL normalization/domain extraction, search matching, clipboard writing, and copied-state handling into shared utilities/hooks.
+- Expanded backend e2e sharing coverage for unknown recipients, self-sharing, email normalization, permission upsert, owner-only share listing, and owner-only revocation.

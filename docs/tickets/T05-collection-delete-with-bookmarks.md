@@ -47,4 +47,14 @@ Deliver safe collection deletion when the collection contains bookmarks.
 ## Commit Message
 
 `feat: add safe collection delete actions`
+## Current backend coverage
 
+Backend E2E now covers the full collection delete action matrix:
+
+- empty collection delete without an action,
+- non-empty collection delete without an action returns `409`,
+- `uncategorize` preserves bookmarks with `collectionId = null`,
+- `move` moves bookmarks to another owned collection,
+- invalid move targets return `404`, including missing target, same collection, and another owner's collection,
+- `delete` removes contained bookmarks,
+- shared/read-only users cannot delete the owner's collection.

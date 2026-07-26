@@ -15,8 +15,9 @@ The app lets a signed-in user create collections, save bookmarks, organize links
 - Read-only collection sharing by known user email.
 - `/all` grouped vault view across owned and shared collections.
 - Search and filtering for bookmarks and collections.
-- Frontend loading, empty, signed-out, API error, action error, and root crash fallback states.
-- Dockerfiles, Docker Compose, and GitHub Actions workflow.
+- Frontend loading, empty, signed-out, API error, action error, and root crash fallback states using reusable state components.
+- Reusable frontend utilities for search matching, URL normalization/domain extraction, and clipboard copied-state handling.
+- Dockerfiles, Docker Compose, and GitHub Actions workflow with CI-gated Cloudflare Pages and Render deploys.
 
 ## App Flow
 
@@ -33,7 +34,7 @@ The app lets a signed-in user create collections, save bookmarks, organize links
 
 ```text
 backend/      NestJS API, Auth0 guard, Prisma services, e2e tests
-frontend/     Vite React app, MUI UI, Auth0 client integration
+frontend/     Vite React app, MUI UI, Auth0 client integration, reusable components/hooks/utils
 docs/         Ticket notes and manual QA screenshots
 .agent/       Reusable agent workflow assets
 transcripts/  Session notes and prompt history
@@ -41,10 +42,10 @@ transcripts/  Session notes and prompt history
 
 ## Tech Stack
 
-- Node.js `>=22.22.0` recommended by the repo.
+- Node.js 24 is recommended; CI runs on Node 24 and backend tests use `node:sqlite`.
 - Backend: NestJS, TypeScript, Prisma, SQLite for local development.
 - Frontend: React 19, Vite 8, React Router 8, MUI 9, Auth0 React SDK.
-- Tests: Vitest and Supertest for backend e2e coverage; Playwright for real-browser frontend E2E flows.
+- Tests: Vitest and Supertest for backend e2e coverage, including owner/privacy and share edge cases; Playwright for real-browser frontend E2E flows.
 
 ## Install
 
@@ -54,7 +55,7 @@ npm install
 
 ## Configure
 
-Create a `.env` from `.env.example` if needed. The app expects the provided Auth0 tenant settings:
+Create local `.env` files from the checked-in `.env.example` files or the variable lists below. Example files intentionally use placeholders; do not commit real secrets or tenant-specific local values.
 
 ```text
 Auth0 domain: dev-yg.us.auth0.com
@@ -178,7 +179,7 @@ $env:E2E_AUTH_PASSWORD="<password from the PDF brief>"
 npm run test:e2e
 ```
 
-The E2E suite logs in through Auth0 once, stores temporary browser state under `frontend/.auth/user.json`, and then runs action tests for:
+The Playwright E2E suite runs in CI before Cloudflare Pages deployment. It logs in through Auth0 once, stores temporary browser state under `frontend/.auth/user.json`, and then runs action tests for:
 
 - signed-in app shell,
 - collection create/update/delete,
@@ -205,8 +206,6 @@ Frontend build can also be run directly:
 ```bash
 npm run build --workspace frontend
 ```
-
-Note: component-level frontend Vitest tests are not included yet. Frontend verification currently uses Playwright E2E, TypeScript/Vite build, and manual browser QA screenshots.
 
 ## Docker
 
@@ -309,6 +308,27 @@ Bearer test:auth0|user-b
 
 This allows backend tests to prove owner isolation and sharing behavior without requiring two real Auth0 users.
 
+
+## Completed Vs Skipped
+
+### Completed
+
+- Auth0 Authorization Code + PKCE login through the provided tenant.
+- Backend access-token validation with issuer, audience, RS256 signature, JWKS, and expiry checks.
+- Owner-scoped collections and bookmarks CRUD.
+- Nullable bookmark collection assignment.
+- Non-empty collection deletion with explicit `uncategorize`, `move`, or `delete` handling.
+- Read-only collection sharing by known user email.
+- `/all` grouped collection/bookmark view.
+- Backend E2E tests for privacy boundaries, bookmark ownership, delete action branches, search, and sharing edge cases.
+- Playwright browser E2E for the one provided Auth0 test account.
+- Dockerfiles, Docker Compose, and CI-gated Cloudflare Pages / Render deployment.
+
+### Skipped Or Limited
+
+- Cross-user browser E2E with two real Auth0 users is not included because the brief provides one known Auth0 login. Cross-user privacy is tested at the backend layer with deterministic `AUTH_MODE=test` subjects.
+- Shared `edit` permission is stored for future role support, but shared users remain read-only in this submission.
+- Render uses SQLite without a persistent disk for the demo deployment; data can reset across deploys unless a disk is attached at `/data`.
 
 ## Product Invariant
 

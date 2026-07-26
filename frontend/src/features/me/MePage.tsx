@@ -1,8 +1,10 @@
 import { useAuth0 } from "@auth0/auth0-react";
-import { Alert, Avatar, Box, Button, Card, CardContent, Chip, CircularProgress, Paper, Stack, Typography } from "@mui/material";
+import { Alert, Avatar, Box, Button, Card, CardContent, Chip, Paper, Stack, Typography } from "@mui/material";
 import { KeyRound, LogOut, ShieldCheck, User } from "lucide-react";
 import { useEffect, useState } from "react";
 import { CurrentUserResponse, fetchCurrentUser } from "../../api/me";
+import { AuthPrompt } from "../../components/AuthPrompt";
+import { LoadingState } from "../../components/LoadingState";
 
 type UserState =
   | { type: "idle" }
@@ -44,12 +46,7 @@ export function MePage() {
   }, [getAccessTokenSilently, isAuthenticated]);
 
   if (isLoading) {
-    return (
-      <Stack direction="row" spacing={1.5} role="status" sx={{ alignItems: "center", py: 4, justifyContent: "center" }}>
-        <CircularProgress size={24} />
-        <Typography color="text.secondary">Verifying Auth0 session...</Typography>
-      </Stack>
-    );
+    return <LoadingState message="Verifying Auth0 session..." />;
   }
 
   return (
@@ -64,20 +61,13 @@ export function MePage() {
       </Box>
 
       {!isAuthenticated ? (
-        <Paper sx={{ p: 4, textAlign: "center", borderRadius: 4 }}>
-          <Stack spacing={2} sx={{ alignItems: "center" }}>
-            <Box sx={{ p: 2, borderRadius: "50%", bgcolor: "#f1f5f9", color: "#64748b" }}>
-              <User size={32} />
-            </Box>
-            <Typography variant="h5">You are not signed in</Typography>
-            <Typography color="text.secondary" sx={{ maxWidth: 380 }}>
-              Sign in with your Auth0 identity to manage bookmarks and private collections.
-            </Typography>
-            <Button variant="contained" onClick={() => void loginWithRedirect()} sx={{ px: 4 }}>
-              Sign In with Auth0
-            </Button>
-          </Stack>
-        </Paper>
+        <AuthPrompt
+          icon={<User size={32} />}
+          title="You are not signed in"
+          description="Sign in with your Auth0 identity to manage bookmarks and private collections."
+          onLogin={() => void loginWithRedirect()}
+          buttonLabel="Sign In with Auth0"
+        />
       ) : null}
 
       {isAuthenticated ? (
@@ -130,10 +120,7 @@ export function MePage() {
                 </Stack>
 
                 {userState.type === "loading" ? (
-                  <Stack direction="row" spacing={1.5} role="status" sx={{ alignItems: "center", py: 2 }}>
-                    <CircularProgress size={20} />
-                    <Typography variant="body2" color="text.secondary">Validating bearer token with NestJS backend...</Typography>
-                  </Stack>
+                  <LoadingState message="Validating bearer token with NestJS backend..." size={20} py={2} variant="body2" centered={false} />
                 ) : null}
 
                 {userState.type === "ready" ? (

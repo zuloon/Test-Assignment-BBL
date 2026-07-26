@@ -6,7 +6,6 @@ import {
   Card,
   CardContent,
   Chip,
-  CircularProgress,
   Dialog,
   DialogActions,
   DialogContent,
@@ -21,7 +20,7 @@ import {
   Tooltip,
   Typography
 } from "@mui/material";
-import { Clock, Folder, FolderPlus, Mail, Pencil, Plus, Search, Share2, Trash2, UserCheck, Users, X } from "lucide-react";
+import { Clock, Folder, FolderPlus, Mail, Pencil, Plus, Share2, Trash2, UserCheck, Users, X } from "lucide-react";
 import { FormEvent, useEffect, useState } from "react";
 import {
   Collection,
@@ -36,6 +35,10 @@ import {
   shareCollection,
   updateCollection
 } from "../../api/collections";
+import { AuthPrompt } from "../../components/AuthPrompt";
+import { EmptyState } from "../../components/EmptyState";
+import { LoadingState } from "../../components/LoadingState";
+import { SearchField } from "../../components/SearchField";
 
 type LoadState =
   | { type: "loading" }
@@ -216,20 +219,14 @@ export function CollectionsPage() {
 
   if (!isAuthenticated) {
     return (
-      <Paper sx={{ p: 4, textAlign: "center", borderRadius: 4 }}>
-        <Stack spacing={2} sx={{ alignItems: "center" }}>
-          <Box sx={{ p: 2, borderRadius: "50%", bgcolor: "#f5f3ff", color: "#7c3aed" }}>
-            <Folder size={32} />
-          </Box>
-          <Typography variant="h5">Sign in to Access Collections</Typography>
-          <Typography color="text.secondary" sx={{ maxWidth: 400 }}>
-            Organize bookmarks into collections with private tenant isolation. Log in to manage collections.
-          </Typography>
-          <Button variant="contained" onClick={() => void loginWithRedirect()} sx={{ px: 4 }}>
-            Log in with Auth0
-          </Button>
-        </Stack>
-      </Paper>
+      <AuthPrompt
+        icon={<Folder size={32} />}
+        title="Sign in to Access Collections"
+        description="Organize bookmarks into collections with private tenant isolation. Log in to manage collections."
+        onLogin={() => void loginWithRedirect()}
+        iconBackground="#f5f3ff"
+        iconColor="#7c3aed"
+      />
     );
   }
 
@@ -311,21 +308,11 @@ export function CollectionsPage() {
 
       {/* Filter Toolbar */}
       <Stack direction={{ xs: "column", sm: "row" }} spacing={2} sx={{ justifyContent: "space-between", alignItems: { sm: "center" } }}>
-        <TextField
+        <SearchField
           placeholder="Filter collections by name..."
           value={filter}
-          onChange={(event) => setFilter(event.target.value)}
-          size="small"
+          onSearchChange={setFilter}
           sx={{ minWidth: { sm: 320 } }}
-          slotProps={{
-            input: {
-              startAdornment: (
-                <InputAdornment position="start">
-                  <Search size={16} color="#64748b" />
-                </InputAdornment>
-              )
-            }
-          }}
         />
 
         {state.type === "ready" ? (
@@ -338,36 +325,27 @@ export function CollectionsPage() {
       </Stack>
 
       {/* Loading state */}
-      {state.type === "loading" ? (
-        <Stack direction="row" spacing={1.5} role="status" sx={{ alignItems: "center", py: 4, justifyContent: "center" }}>
-          <CircularProgress size={24} />
-          <Typography color="text.secondary">Fetching collections...</Typography>
-        </Stack>
-      ) : null}
+      {state.type === "loading" ? <LoadingState message="Fetching collections..." /> : null}
 
       {/* Error state */}
       {state.type === "error" ? <Alert severity="error">{state.message}</Alert> : null}
 
       {/* Empty state */}
       {state.type === "ready" && state.collections.length === 0 ? (
-        <Paper sx={{ p: 5, textAlign: "center", bgcolor: "#ffffff", borderRadius: 4, border: "1px dashed #cbd5e1" }}>
-          <Stack spacing={2} sx={{ alignItems: "center" }}>
-            <Box sx={{ p: 2, borderRadius: "50%", bgcolor: "#f5f3ff", color: "#7c3aed" }}>
-              <Folder size={32} />
-            </Box>
-            <Typography variant="h6" color="text.secondary">
-              No collections found
-            </Typography>
-            <Typography variant="body2" color="text.secondary" sx={{ maxWidth: 360 }}>
-              {filter ? "Try clearing your search query." : "Organize your bookmarks into custom folders."}
-            </Typography>
-            {!showCreate ? (
+        <EmptyState
+          icon={<Folder size={32} />}
+          title="No collections found"
+          description={filter ? "Try clearing your search query." : "Organize your bookmarks into custom folders."}
+          iconBackground="#f5f3ff"
+          iconColor="#7c3aed"
+          action={
+            !showCreate ? (
               <Button variant="contained" size="small" startIcon={<Plus size={16} />} onClick={() => setShowCreate(true)}>
                 Create First Collection
               </Button>
-            ) : null}
-          </Stack>
-        </Paper>
+            ) : null
+          }
+        />
       ) : null}
 
       {/* Collections Grid */}
@@ -617,12 +595,7 @@ export function CollectionsPage() {
               </Typography>
 
               {isLoadingShares ? (
-                <Stack direction="row" spacing={1.5} role="status" sx={{ alignItems: "center", py: 1 }}>
-                  <CircularProgress size={20} />
-                  <Typography variant="body2" color="text.secondary">
-                    Loading shares...
-                  </Typography>
-                </Stack>
+                <LoadingState message="Loading shares..." size={20} py={1} variant="body2" centered={false} />
               ) : shares.length > 0 ? (
                 <Stack spacing={1}>
                   {shares.map((share) => (

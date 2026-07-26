@@ -65,3 +65,16 @@ Rationale: `prisma generate` works, but `prisma db push` and `prisma migrate dev
 Decision: the share workflow stores `read` or `edit` in `CollectionShare.permission`, but mutation access remains owner-only.
 
 Rationale: the UI can show the intended role model for the bonus flow while preserving the already-tested privacy boundary until edit-role behavior is implemented and covered by tests.
+## D11. CI-Gated Deployments
+
+Decision: deploy Cloudflare Pages and Render from GitHub Actions instead of relying on platform-native auto deploys.
+
+Rationale: the user-facing deployment should only happen after the relevant checks pass. Cloudflare Pages waits for Playwright E2E through `frontend_e2e`, and Render waits for backend Docker image validation through `backend_docker`.
+
+Trade-off: deployment depends on GitHub Actions secrets and deploy hooks being configured manually. Sensitive values stay out of the repository.
+
+## D12. Frontend Reuse Boundary
+
+Decision: repeated signed-out prompts, loading states, empty states, search inputs, URL helpers, and clipboard copied-state handling are shared through small frontend components/hooks/utils.
+
+Rationale: the pages still own their workflows and copy, but duplicated UI shells and browser utility logic now live in one place. This keeps feature pages easier to scan without introducing a broad design-system abstraction.
