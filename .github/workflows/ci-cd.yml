@@ -66,6 +66,9 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Generate Prisma client
+        run: npm run db:generate --workspace backend
+
       - name: Install Playwright Chrome
         run: npx playwright install --with-deps chrome
         working-directory: frontend
