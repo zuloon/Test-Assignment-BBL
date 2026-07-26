@@ -63,6 +63,79 @@ Callback URL: http://localhost:3000/callback
 Logout URL: http://localhost:3000
 ```
 
+## Deployment Environment Variables
+
+Sensitive deployment values are not committed to this repository. Add them manually in the platform that uses them.
+
+### Local development
+
+Create or update local `.env` files from the checked-in examples:
+
+- Root `.env`: shared Auth0 URLs, frontend/backend URLs, and default database URL.
+- `backend/.env`: backend runtime values such as `PORT`, `DATABASE_URL`, `AUTH0_ISSUER`, `AUTH0_AUDIENCE`, and `AUTH_MODE`.
+- `frontend/.env`: Vite/Auth0 values for local frontend builds, if you need to override defaults.
+
+Playwright E2E also needs these local shell variables before running `npm run test:e2e`:
+
+```text
+E2E_AUTH_EMAIL=<Auth0 test user email>
+E2E_AUTH_PASSWORD=<Auth0 test user password>
+```
+
+### GitHub Actions
+
+Add these in GitHub repository settings under `Settings -> Secrets and variables -> Actions`.
+
+Repository secrets:
+
+```text
+CLOUDFLARE_ACCOUNT_ID=<Cloudflare account id>
+CLOUDFLARE_API_TOKEN=<Cloudflare API token with Pages deploy access>
+RENDER_BACKEND_DEPLOY_HOOK_URL=<Render deploy hook URL>
+E2E_AUTH_EMAIL=<Auth0 test user email>
+E2E_AUTH_PASSWORD=<Auth0 test user password>
+```
+
+Repository variables:
+
+```text
+ENABLE_CLOUDFLARE_PAGES_DEPLOY=true
+CLOUDFLARE_PAGES_PROJECT_NAME=bbl-bookmark-manager
+ENABLE_RENDER_BACKEND_DEPLOY=true
+VITE_API_BASE_URL=<frontend build API base URL>
+VITE_AUTH0_DOMAIN=dev-yg.us.auth0.com
+VITE_AUTH0_CLIENT_ID=<Auth0 SPA client id>
+VITE_AUTH0_AUDIENCE=https://bbl-candidate-test-api
+```
+
+The workflow gates Cloudflare Pages deployment behind `frontend_e2e`. If Playwright fails or the E2E Auth0 secrets are missing, `deploy_frontend` will not run.
+
+### Cloudflare Pages
+
+The current Pages project is deployed by GitHub Actions through `wrangler pages deploy`. Keep Cloudflare's native Git integration disconnected, or disable its auto deploys if you connect it later, otherwise Cloudflare can deploy directly on push without waiting for GitHub Actions tests.
+
+Project name:
+
+```text
+bbl-bookmark-manager
+```
+
+### Render backend
+
+Add these in the Render Web Service environment settings:
+
+```text
+NODE_ENV=production
+PORT=3001
+DATABASE_URL=file:/data/dev.db
+FRONTEND_URL=https://bbl-bookmark-manager.pages.dev
+AUTH0_ISSUER=https://dev-yg.us.auth0.com/
+AUTH0_AUDIENCE=https://bbl-candidate-test-api
+AUTH_MODE=auth0
+```
+
+Render Auto Deploy should stay off when GitHub Actions is responsible for CI-gated backend deploys through the Render deploy hook.
+
 ## Database
 
 Generate Prisma Client and bootstrap the local SQLite database:
